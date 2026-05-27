@@ -1,73 +1,158 @@
-# React + TypeScript + Vite
+# MyFlow Finance
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicação web premium para controle financeiro pessoal desenvolvida com React, TypeScript e Vite.
 
-Currently, two official plugins are available:
+## Preview
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+🔗 Produção:
+https://myflow-finance.vercel.app
 
-## React Compiler
+## Sobre o projeto
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+O MyFlow Finance foi desenvolvido com foco em:
+- experiência moderna;
+- arquitetura escalável;
+- design system consistente;
+- responsividade real;
+- microinterações refinadas;
+- performance visual;
+- experiência mobile premium.
 
-## Expanding the ESLint configuration
+O projeto evoluiu de um dashboard financeiro simples para uma aplicação com estrutura próxima de produtos SaaS modernos.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+---
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Funcionalidades
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Dashboard
+- KPIs financeiros
+- Cards analíticos
+- Gráficos interativos
+- Insights visuais
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+### Transações
+- Cadastro de receitas e despesas
+- Edição e exclusão
+- Filtros inteligentes
+- Busca dinâmica
+- Estados vazios refinados
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Categorias
+- Distribuição por categoria
+- Indicadores visuais
+- Destaques automáticos
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Relatórios
+- Visualização analítica
+- Gráficos responsivos
+- Insights financeiros
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+### UX/UI
+- Dark mode
+- Responsividade completa
+- Sidebar responsiva
+- Mobile navigation
+- Toast notifications
+- Loading skeletons
+- Hover animations
+- Motion system
+- Design tokens
+- Accessibility basics
+
+---
+
+## Tecnologias utilizadas
+
+### Frontend
+- React
+- TypeScript
+- Vite
+
+### UI / UX
+- CSS Architecture
+- Design Tokens
+- Responsive Design
+- Motion System
+
+### Bibliotecas
+- Recharts
+- Lucide React
+
+### Deploy
+- Vercel
+- GitHub
+
+---
+
+## Arquitetura do projeto
+
+O projeto foi estruturado com foco em:
+- componentização;
+- reutilização;
+- escalabilidade;
+- consistência visual;
+- separação de responsabilidades.
+
+Incluindo:
+- custom hooks;
+- design system;
+- tokens globais;
+- estrutura modular;
+- estados reutilizáveis.
+
+---
+
+## Responsividade
+
+O projeto foi otimizado para:
+- Desktop
+- Tablet
+- Mobile
+- iPhone Safari
+- Android Chrome
+
+---
+
+## Performance
+
+O projeto utiliza:
+- build otimizado com Vite;
+- lazy rendering visual;
+- skeleton loading;
+- otimizações de transição;
+- arquitetura SPA moderna.
+
+---
+
+## Roadmap
+
+### Fase atual
+- Frontend Premium
+- Deploy Production
+- Design System
+- UX refinada
+
+### Próximas evoluções
+- Supabase
+- Autenticação
+- Multiusuário
+- Persistência em banco
+- Dashboard avançado
+- IA financeira
+- PWA
+- Analytics
+
+---
+
+## Autor
+
+Desenvolvido por Lucas Gaviti.
+
+GitHub:
+https://github.com/DevGaviti
+
+---
+
+## Licença
+
+Projeto desenvolvido para fins de portfólio e estudo.
