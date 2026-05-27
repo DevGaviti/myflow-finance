@@ -2447,7 +2447,7 @@ body.dark .reports-insight-card {
   }
 
   .chart-wrapper {
-    height: 230px;
+    height: 260px;
     overflow: hidden;
   }
 
@@ -2692,6 +2692,23 @@ body.dark .reports-insight-card {
   .modal-actions .secondary-btn,
   .modal-actions .danger-btn {
     min-height: 48px;
+  }
+
+  .category-chart-wrapper {
+    min-height: 300px;
+    overflow: visible;
+  }
+
+  .category-chart-wrapper .recharts-responsive-container {
+    min-height: 300px;
+  }
+
+  .category-chart-wrapper .recharts-surface {
+    overflow: visible;
+  }
+
+  .category-chart-center {
+    top: 47%;
   }
 }
 
