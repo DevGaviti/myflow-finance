@@ -3,7 +3,13 @@ import {
   useState,
 } from 'react';
 
+import toast from 'react-hot-toast';
+
 import { supabase } from '../lib/supabase';
+
+import {
+  useAuth,
+} from '../contexts/AuthContext';
 
 import type {
   Transaction,
@@ -17,6 +23,7 @@ type SupabaseTransaction = {
   category: string;
   date: string;
   created_at: string;
+  user_id: string;
 };
 
 function mapFromSupabase(
@@ -36,6 +43,7 @@ function mapFromSupabase(
 
 function mapToSupabase(
   transaction: Transaction,
+  userId: string,
 ) {
   return {
     title: transaction.title,
@@ -43,10 +51,13 @@ function mapToSupabase(
     type: transaction.type,
     category: transaction.category,
     date: transaction.date.split('T')[0],
+    user_id: userId,
   };
 }
 
 export function useTransactions() {
+  const { user } = useAuth();
+
   const [
     transactions,
     setTransactions,
@@ -58,7 +69,20 @@ export function useTransactions() {
   const [error, setError] =
     useState<string | null>(null);
 
+  function handleError(
+    message: string,
+  ) {
+    setError(message);
+    toast.error(message);
+  }
+
   async function fetchTransactions() {
+    if (!user) {
+      setTransactions([]);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -66,6 +90,7 @@ export function useTransactions() {
       await supabase
         .from('transactions')
         .select('*')
+        .eq('user_id', user.id)
         .order('date', {
           ascending: false,
         })
@@ -74,7 +99,7 @@ export function useTransactions() {
         });
 
     if (error) {
-      setError(error.message);
+      handleError(error.message);
       setTransactions([]);
       setIsLoading(false);
       return;
@@ -91,24 +116,32 @@ export function useTransactions() {
 
   useEffect(() => {
     fetchTransactions();
-  }, []);
+  }, [user?.id]);
 
   async function addTransaction(
     transaction: Transaction,
   ) {
+    if (!user) {
+      handleError(
+        'Usuário não autenticado.',
+      );
+      return;
+    }
+
     const { data, error } =
       await supabase
         .from('transactions')
         .insert(
           mapToSupabase(
             transaction,
+            user.id,
           ),
         )
         .select()
         .single();
 
     if (error) {
-      setError(error.message);
+      handleError(error.message);
       return;
     }
 
@@ -118,19 +151,31 @@ export function useTransactions() {
         ...prev,
       ],
     );
+
+    toast.success(
+      'Transação adicionada com sucesso!',
+    );
   }
 
   async function removeTransaction(
     id: number,
   ) {
+    if (!user) {
+      handleError(
+        'Usuário não autenticado.',
+      );
+      return;
+    }
+
     const { error } =
       await supabase
         .from('transactions')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user.id);
 
     if (error) {
-      setError(error.message);
+      handleError(error.message);
       return;
     }
 
@@ -141,28 +186,41 @@ export function useTransactions() {
             item.id !== id,
         ),
     );
+
+    toast.success(
+      'Transação removida.',
+    );
   }
 
   async function updateTransaction(
     updatedTransaction: Transaction,
   ) {
+    if (!user) {
+      handleError(
+        'Usuário não autenticado.',
+      );
+      return;
+    }
+
     const { data, error } =
       await supabase
         .from('transactions')
         .update(
           mapToSupabase(
             updatedTransaction,
+            user.id,
           ),
         )
         .eq(
           'id',
           updatedTransaction.id,
         )
+        .eq('user_id', user.id)
         .select()
         .single();
 
     if (error) {
-      setError(error.message);
+      handleError(error.message);
       return;
     }
 
@@ -174,6 +232,10 @@ export function useTransactions() {
             ? mapFromSupabase(data)
             : item,
         ),
+    );
+
+    toast.success(
+      'Transação atualizada.',
     );
   }
 
