@@ -7,6 +7,9 @@ import {
 
 import MainLayout from './layouts/MainLayout';
 
+import ProtectedRoute from './components/ProtectedRoute';
+
+import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Transactions from './pages/Transactions';
 import Categories from './pages/Categories';
@@ -17,7 +20,16 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route
-          element={<MainLayout />}
+          path="/login"
+          element={<Login />}
+        />
+
+        <Route
+          element={
+            <ProtectedRoute>
+              <MainLayout />
+            </ProtectedRoute>
+          }
         >
           <Route
             path="/dashboard"
@@ -26,16 +38,12 @@ export default function App() {
 
           <Route
             path="/transactions"
-            element={
-              <Transactions />
-            }
+            element={<Transactions />}
           />
 
           <Route
             path="/categories"
-            element={
-              <Categories />
-            }
+            element={<Categories />}
           />
 
           <Route

@@ -1,7 +1,12 @@
 import {
   useEffect,
+  useMemo,
   useState,
 } from 'react';
+
+import {
+  useAuth,
+} from '../contexts/AuthContext';
 
 type Props = {
   onNewTransaction: () => void;
@@ -10,6 +15,11 @@ type Props = {
 export default function Topbar({
   onNewTransaction,
 }: Props) {
+  const {
+    user,
+    signOut,
+  } = useAuth();
+
   const [darkMode, setDarkMode] =
     useState(false);
 
@@ -20,6 +30,22 @@ export default function Topbar({
 
   const [showUserMenu, setShowUserMenu] =
     useState(false);
+
+  const userEmail =
+    user?.email ?? 'Usuário';
+
+  const userInitials =
+    useMemo(() => {
+      if (!userEmail)
+        return 'US';
+
+      const [name] =
+        userEmail.split('@');
+
+      return name
+        .slice(0, 2)
+        .toUpperCase();
+    }, [userEmail]);
 
   useEffect(() => {
     const savedTheme =
@@ -41,6 +67,10 @@ export default function Topbar({
     );
 
     setDarkMode(isDark);
+  }
+
+  async function handleLogout() {
+    await signOut();
   }
 
   return (
@@ -76,7 +106,9 @@ export default function Topbar({
 
           {showNotifications && (
             <div className="topbar-dropdown">
-              <strong>Notificações</strong>
+              <strong>
+                Notificações
+              </strong>
 
               <p>
                 Nenhuma notificação no momento.
@@ -101,18 +133,26 @@ export default function Topbar({
             }}
             title="Menu do usuário"
           >
-            LG
+            {userInitials}
           </button>
 
           {showUserMenu && (
             <div className="topbar-dropdown user-dropdown">
-              <strong>Lucas</strong>
+              <strong>
+                {userEmail}
+              </strong>
 
-              <p>Finance App</p>
+              <p>
+                Conta conectada
+              </p>
 
-              <span>
-                Perfil e configurações em breve.
-              </span>
+              <button
+                type="button"
+                className="logout-btn"
+                onClick={handleLogout}
+              >
+                Sair da conta
+              </button>
             </div>
           )}
         </div>
