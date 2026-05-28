@@ -3,133 +3,137 @@ import {
   useState,
 } from 'react';
 
+import { supabase } from '../lib/supabase';
+
 import type {
   Transaction,
 } from '../types/transaction';
 
-const initialTransactions: Transaction[] =
-  [
-    {
-      id: 1,
-      title: 'Salário',
-      date: new Date().toISOString(),
-      value: 4500,
-      type: 'income',
-      category: 'Salário',
-    },
+type SupabaseTransaction = {
+  id: number;
+  title: string;
+  amount: number;
+  type: Transaction['type'];
+  category: string;
+  date: string;
+  created_at: string;
+};
 
-    {
-      id: 2,
-      title: 'Academia',
-      date: new Date().toISOString(),
-      value: 100,
-      type: 'expense',
-      category: 'Lazer',
-    },
-
-    {
-      id: 3,
-      title: 'Mercado',
-      date: new Date().toISOString(),
-      value: 320,
-      type: 'expense',
-      category: 'Alimentação',
-    },
-  ];
-
-function isValidDate(date: string) {
-  return !Number.isNaN(
-    new Date(date).getTime(),
-  );
+function mapFromSupabase(
+  transaction: SupabaseTransaction,
+): Transaction {
+  return {
+    id: transaction.id,
+    title: transaction.title,
+    value: Number(transaction.amount),
+    type: transaction.type,
+    category: transaction.category,
+    date: new Date(
+      `${transaction.date}T12:00:00`,
+    ).toISOString(),
+  };
 }
 
-function normalizeTransactionDate(
-  date: string,
+function mapToSupabase(
+  transaction: Transaction,
 ) {
-  if (isValidDate(date)) {
-    return new Date(
-      date,
-    ).toISOString();
-  }
-
-  return new Date().toISOString();
-}
-
-function normalizeTransactions(
-  transactions: Transaction[],
-) {
-  return transactions.map(
-    (transaction) => ({
-      ...transaction,
-
-      date:
-        normalizeTransactionDate(
-          transaction.date,
-        ),
-    }),
-  );
+  return {
+    title: transaction.title,
+    amount: transaction.value,
+    type: transaction.type,
+    category: transaction.category,
+    date: transaction.date.split('T')[0],
+  };
 }
 
 export function useTransactions() {
   const [
     transactions,
     setTransactions,
-  ] = useState<Transaction[]>(
-    () => {
-      const stored =
-        localStorage.getItem(
-          'finance-transactions',
-        );
+  ] = useState<Transaction[]>([]);
 
-      if (stored) {
-        try {
-          const parsed =
-            JSON.parse(
-              stored,
-            ) as Transaction[];
+  const [isLoading, setIsLoading] =
+    useState(true);
 
-          return normalizeTransactions(
-            parsed,
-          );
-        } catch {
-          return initialTransactions;
-        }
-      }
+  const [error, setError] =
+    useState<string | null>(null);
 
-      return initialTransactions;
-    },
-  );
+  async function fetchTransactions() {
+    setIsLoading(true);
+    setError(null);
 
-  useEffect(() => {
-    localStorage.setItem(
-      'finance-transactions',
-      JSON.stringify(
-        transactions,
+    const { data, error } =
+      await supabase
+        .from('transactions')
+        .select('*')
+        .order('date', {
+          ascending: false,
+        })
+        .order('id', {
+          ascending: false,
+        });
+
+    if (error) {
+      setError(error.message);
+      setTransactions([]);
+      setIsLoading(false);
+      return;
+    }
+
+    setTransactions(
+      (data ?? []).map(
+        mapFromSupabase,
       ),
     );
-  }, [transactions]);
 
-  function addTransaction(
+    setIsLoading(false);
+  }
+
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
+
+  async function addTransaction(
     transaction: Transaction,
   ) {
+    const { data, error } =
+      await supabase
+        .from('transactions')
+        .insert(
+          mapToSupabase(
+            transaction,
+          ),
+        )
+        .select()
+        .single();
+
+    if (error) {
+      setError(error.message);
+      return;
+    }
+
     setTransactions(
       (prev) => [
-        {
-          ...transaction,
-
-          date:
-            normalizeTransactionDate(
-              transaction.date,
-            ),
-        },
+        mapFromSupabase(data),
         ...prev,
       ],
     );
   }
 
-  function removeTransaction(
+  async function removeTransaction(
     id: number,
   ) {
+    const { error } =
+      await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', id);
+
+    if (error) {
+      setError(error.message);
+      return;
+    }
+
     setTransactions(
       (prev) =>
         prev.filter(
@@ -139,28 +143,37 @@ export function useTransactions() {
     );
   }
 
-  function updateTransaction(
+  async function updateTransaction(
     updatedTransaction: Transaction,
   ) {
+    const { data, error } =
+      await supabase
+        .from('transactions')
+        .update(
+          mapToSupabase(
+            updatedTransaction,
+          ),
+        )
+        .eq(
+          'id',
+          updatedTransaction.id,
+        )
+        .select()
+        .single();
+
+    if (error) {
+      setError(error.message);
+      return;
+    }
+
     setTransactions(
       (prev) =>
-        prev.map((item) => {
-          if (
-            item.id ===
-            updatedTransaction.id
-          ) {
-            return {
-              ...updatedTransaction,
-
-              date:
-                normalizeTransactionDate(
-                  updatedTransaction.date,
-                ),
-            };
-          }
-
-          return item;
-        }),
+        prev.map((item) =>
+          item.id ===
+          updatedTransaction.id
+            ? mapFromSupabase(data)
+            : item,
+        ),
     );
   }
 
@@ -202,6 +215,12 @@ export function useTransactions() {
     totalExpense,
 
     balance,
+
+    isLoading,
+
+    error,
+
+    fetchTransactions,
 
     addTransaction,
 
