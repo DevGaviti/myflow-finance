@@ -7,6 +7,8 @@ import toast from 'react-hot-toast';
 import Card from '../components/Card';
 import TransactionsList from '../components/TransactionsList';
 import TransactionModal from '../components/TransactionModal';
+import ConfirmModal from '../components/ConfirmModal';
+import EmptyState from '../components/EmptyState';
 
 import { useTransactions } from '../hook/useTransactions';
 
@@ -87,6 +89,11 @@ export default function Transactions() {
 
   const [isSaving, setIsSaving] =
     useState(false);
+
+  const [
+    isDeleting,
+    setIsDeleting,
+  ] = useState(false);
 
   function formatCurrency(
     input: string,
@@ -250,9 +257,15 @@ export default function Transactions() {
   async function handleRemoveTransaction(
     id: number,
   ) {
-    await removeTransaction(id);
+    setIsDeleting(true);
 
-    setDeleteId(null);
+    try {
+      await removeTransaction(id);
+
+      setDeleteId(null);
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   const filteredTransactions =
@@ -402,6 +415,26 @@ export default function Transactions() {
               </div>
             ))}
           </div>
+        ) : filteredTransactions.length === 0 ? (
+          <EmptyState
+            icon="📊"
+            title="Nenhuma transação encontrada"
+            description={
+              transactions.length === 0
+                ? 'Adicione sua primeira receita ou despesa para começar a acompanhar sua vida financeira.'
+                : 'Nenhum resultado corresponde aos filtros atuais. Ajuste a busca ou limpe os filtros para visualizar suas transações.'
+            }
+            actionLabel={
+              transactions.length === 0
+                ? '+ Nova transação'
+                : undefined
+            }
+            onAction={
+              transactions.length === 0
+                ? handleNewTransaction
+                : undefined
+            }
+          />
         ) : (
           <TransactionsList
             transactions={filteredTransactions}
@@ -444,41 +477,24 @@ export default function Transactions() {
         }
       />
 
-      {deleteId && (
-        <div className="modal-overlay">
-          <div className="confirm-modal">
-            <h2>
-              Excluir transação?
-            </h2>
-
-            <p className="delete-text">
-              Essa ação não pode ser desfeita.
-            </p>
-
-            <div className="modal-actions">
-              <button
-                className="secondary-btn"
-                onClick={() =>
-                  setDeleteId(null)
-                }
-              >
-                Cancelar
-              </button>
-
-              <button
-                className="danger-btn"
-                onClick={() =>
-                  handleRemoveTransaction(
-                    deleteId,
-                  )
-                }
-              >
-                Excluir
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        open={Boolean(deleteId)}
+        title="Excluir transação?"
+        description="Essa ação não pode ser desfeita."
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        loading={isDeleting}
+        onCancel={() =>
+          setDeleteId(null)
+        }
+        onConfirm={() => {
+          if (deleteId) {
+            handleRemoveTransaction(
+              deleteId,
+            );
+          }
+        }}
+      />
     </div>
   );
 }
