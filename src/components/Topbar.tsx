@@ -8,6 +8,11 @@ import {
   useAuth,
 } from '../contexts/AuthContext';
 
+import {
+  notifyError,
+  notifySuccess,
+} from '../lib/toast';
+
 type Props = {
   onNewTransaction: () => void;
 };
@@ -30,6 +35,11 @@ export default function Topbar({
 
   const [showUserMenu, setShowUserMenu] =
     useState(false);
+
+  const [
+    isLoggingOut,
+    setIsLoggingOut,
+  ] = useState(false);
 
   const userEmail =
     user?.email ?? 'Usuário';
@@ -70,7 +80,24 @@ export default function Topbar({
   }
 
   async function handleLogout() {
-    await signOut();
+    if (isLoggingOut)
+      return;
+
+    setIsLoggingOut(true);
+
+    try {
+      await signOut();
+
+      notifySuccess(
+        'Sessão encerrada com sucesso.',
+      );
+    } catch {
+      notifyError(
+        'Não foi possível sair da conta.',
+      );
+
+      setIsLoggingOut(false);
+    }
   }
 
   return (
@@ -86,6 +113,7 @@ export default function Topbar({
           className="icon-btn"
           onClick={toggleTheme}
           title="Alternar tema"
+          disabled={isLoggingOut}
         >
           {darkMode ? '☀️' : '🌙'}
         </button>
@@ -94,6 +122,7 @@ export default function Topbar({
           <button
             className="icon-btn"
             title="Notificações"
+            disabled={isLoggingOut}
             onClick={() => {
               setShowNotifications(
                 !showNotifications,
@@ -120,6 +149,7 @@ export default function Topbar({
         <button
           className="primary-btn"
           onClick={onNewTransaction}
+          disabled={isLoggingOut}
         >
           + Nova transação
         </button>
@@ -127,6 +157,7 @@ export default function Topbar({
         <div className="topbar-menu-wrapper">
           <button
             className="topbar-avatar"
+            disabled={isLoggingOut}
             onClick={() => {
               setShowUserMenu(!showUserMenu);
               setShowNotifications(false);
@@ -149,9 +180,12 @@ export default function Topbar({
               <button
                 type="button"
                 className="logout-btn"
+                disabled={isLoggingOut}
                 onClick={handleLogout}
               >
-                Sair da conta
+                {isLoggingOut
+                  ? 'Saindo...'
+                  : 'Sair da conta'}
               </button>
             </div>
           )}
