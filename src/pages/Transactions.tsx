@@ -32,6 +32,7 @@ const categories = [
 export default function Transactions() {
   const {
     transactions,
+    isLoading,
     addTransaction,
     removeTransaction,
     updateTransaction,
@@ -385,15 +386,29 @@ export default function Transactions() {
           </button>
         </div>
 
-        <TransactionsList
-          transactions={
-            filteredTransactions
-          }
-          onEdit={
-            handleEditTransaction
-          }
-          onDelete={setDeleteId}
-        />
+        {isLoading ? (
+          <div className="skeleton-list">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div
+                key={index}
+                className="skeleton-card"
+              >
+                <div className="skeleton skeleton-icon" />
+
+                <div className="skeleton-stack">
+                  <div className="skeleton skeleton-line medium" />
+                  <div className="skeleton skeleton-line short" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <TransactionsList
+            transactions={filteredTransactions}
+            onEdit={handleEditTransaction}
+            onDelete={setDeleteId}
+          />
+        )}
       </Card>
 
       <TransactionModal

@@ -26,6 +26,16 @@ type SupabaseTransaction = {
   user_id: string;
 };
 
+const MIN_LOADING_TIME = 350;
+
+function wait(
+  milliseconds: number,
+) {
+  return new Promise((resolve) =>
+    setTimeout(resolve, milliseconds),
+  );
+}
+
 function mapFromSupabase(
   transaction: SupabaseTransaction,
 ): Transaction {
@@ -86,6 +96,9 @@ export function useTransactions() {
     setIsLoading(true);
     setError(null);
 
+    const loadingStart =
+      Date.now();
+
     const { data, error } =
       await supabase
         .from('transactions')
@@ -97,6 +110,15 @@ export function useTransactions() {
         .order('id', {
           ascending: false,
         });
+
+    const elapsed =
+      Date.now() - loadingStart;
+
+    if (elapsed < MIN_LOADING_TIME) {
+      await wait(
+        MIN_LOADING_TIME - elapsed,
+      );
+    }
 
     if (error) {
       handleError(error.message);
