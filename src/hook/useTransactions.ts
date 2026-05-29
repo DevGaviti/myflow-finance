@@ -3,9 +3,12 @@ import {
   useState,
 } from 'react';
 
-import toast from 'react-hot-toast';
-
 import { supabase } from '../lib/supabase';
+
+import {
+  notifySuccess,
+  notifyError,
+} from '../lib/toast';
 
 import {
   useAuth,
@@ -83,7 +86,8 @@ export function useTransactions() {
     message: string,
   ) {
     setError(message);
-    toast.error(message);
+
+    notifyError(message);
   }
 
   async function fetchTransactions() {
@@ -174,7 +178,7 @@ export function useTransactions() {
       ],
     );
 
-    toast.success(
+    notifySuccess(
       'Transação adicionada com sucesso!',
     );
   }
@@ -209,7 +213,7 @@ export function useTransactions() {
         ),
     );
 
-    toast.success(
+    notifySuccess(
       'Transação removida.',
     );
   }
@@ -256,7 +260,7 @@ export function useTransactions() {
         ),
     );
 
-    toast.success(
+    notifySuccess(
       'Transação atualizada.',
     );
   }
