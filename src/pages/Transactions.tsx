@@ -2,7 +2,8 @@ import {
   useState,
 } from 'react';
 
-import Toast from '../components/Toast';
+import toast from 'react-hot-toast';
+
 import Card from '../components/Card';
 import TransactionsList from '../components/TransactionsList';
 import TransactionModal from '../components/TransactionModal';
@@ -16,12 +17,6 @@ import type {
   Transaction,
   TransactionType,
 } from '../types/transaction';
-
-type ToastType =
-  | 'success'
-  | 'info'
-  | 'warning'
-  | 'error';
 
 const categories = [
   'Alimentação',
@@ -89,12 +84,6 @@ export default function Transactions() {
       null,
     );
 
-  const [toastMessage, setToastMessage] =
-    useState('');
-
-  const [toastType, setToastType] =
-    useState<ToastType>('success');
-
   const [isSaving, setIsSaving] =
     useState(false);
 
@@ -149,18 +138,6 @@ export default function Transactions() {
     );
   }
 
-  function showToast(
-    message: string,
-    type: ToastType = 'success',
-  ) {
-    setToastMessage(message);
-    setToastType(type);
-
-    setTimeout(() => {
-      setToastMessage('');
-    }, 3000);
-  }
-
   function handleNewTransaction() {
     setEditId(null);
     resetForm();
@@ -188,13 +165,8 @@ export default function Transactions() {
           new Date(date).toISOString(),
       };
 
-    addTransaction(
+    await addTransaction(
       newTransaction,
-    );
-
-    showToast(
-      'Transação cadastrada com sucesso',
-      'success',
     );
 
     resetForm();
@@ -258,7 +230,7 @@ export default function Transactions() {
       setTimeout(resolve, 500),
     );
 
-    updateTransaction({
+    await updateTransaction({
       id: editId,
       title,
       value: Number(value),
@@ -268,26 +240,16 @@ export default function Transactions() {
         new Date(date).toISOString(),
     });
 
-    showToast(
-      'Transação atualizada',
-      'info',
-    );
-
     setEditId(null);
     resetForm();
     setShowModal(false);
     setIsSaving(false);
   }
 
-  function handleRemoveTransaction(
+  async function handleRemoveTransaction(
     id: number,
   ) {
-    removeTransaction(id);
-
-    showToast(
-      'Transação removida',
-      'warning',
-    );
+    await removeTransaction(id);
 
     setDeleteId(null);
   }
@@ -351,9 +313,8 @@ export default function Transactions() {
       rows,
     );
 
-    showToast(
-      'CSV exportado com sucesso',
-      'success',
+    toast.success(
+      'CSV exportado com sucesso!',
     );
   }
 
@@ -502,13 +463,6 @@ export default function Transactions() {
             </div>
           </div>
         </div>
-      )}
-
-      {toastMessage && (
-        <Toast
-          message={toastMessage}
-          type={toastType}
-        />
       )}
     </div>
   );
