@@ -1,5 +1,4 @@
 import {
-  useEffect,
   useState,
 } from 'react';
 
@@ -11,6 +10,8 @@ import Topbar from '../components/Topbar';
 import FinanceChart from '../components/FinanceChart';
 import CategoryChart from '../components/CategoryChart';
 import PageLoader from '../components/PageLoader';
+import ConfirmModal from '../components/ConfirmModal';
+import EmptyState from '../components/EmptyState';
 
 import { useTransactions } from '../hook/useTransactions';
 
@@ -42,13 +43,11 @@ type PeriodFilter =
 export default function Dashboard() {
   const {
     transactions,
+    isLoading,
     addTransaction: addTransactionHook,
     removeTransaction: removeTransactionHook,
     updateTransaction,
   } = useTransactions();
-
-  const [isLoading, setIsLoading] =
-    useState(true);
 
   const [showModal, setShowModal] =
     useState(false);
@@ -106,19 +105,17 @@ export default function Dashboard() {
       null,
     );
 
+  const [isSaving, setIsSaving] =
+    useState(false);
+
+  const [
+    isDeleting,
+    setIsDeleting,
+  ] = useState(false);
+
   const hasCustomDateFilter =
     Boolean(startDate) ||
     Boolean(endDate);
-
-  useEffect(() => {
-    const timer =
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 900);
-
-    return () =>
-      clearTimeout(timer);
-  }, []);
 
   function formatCurrency(
     input: string,
@@ -314,39 +311,51 @@ export default function Dashboard() {
     );
   }
 
-  function addTransaction() {
+  async function addTransaction() {
     if (!title || !value)
       return;
 
-    const newTransaction: Transaction =
-      {
-        id: Date.now(),
-        title,
-        value:
-          Number(value),
-        type,
-        category,
-        date:
-          new Date(
-            `${date}T12:00:00`,
-          ).toISOString(),
-      };
+    setIsSaving(true);
 
-    addTransactionHook(
-      newTransaction,
-    );
+    try {
+      const newTransaction: Transaction =
+        {
+          id: Date.now(),
+          title,
+          value:
+            Number(value),
+          type,
+          category,
+          date:
+            new Date(
+              `${date}T12:00:00`,
+            ).toISOString(),
+        };
 
-    resetForm();
+      await addTransactionHook(
+        newTransaction,
+      );
 
-    setShowModal(false);
+      resetForm();
+
+      setShowModal(false);
+    } finally {
+      setIsSaving(false);
+    }
   }
 
-  function removeTransaction(
+  async function removeTransaction(
     id: number,
   ) {
-    removeTransactionHook(id);
+    setIsDeleting(true);
 
-    setDeleteId(null);
+    try {
+      await removeTransactionHook(id);
+
+      setDeleteId(null);
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   function editTransaction(
@@ -396,27 +405,33 @@ export default function Dashboard() {
     setShowModal(true);
   }
 
-  function saveEditedTransaction() {
-    if (!title || !value)
+  async function saveEditedTransaction() {
+    if (!title || !value || !editId)
       return;
 
-    updateTransaction({
-      id: editId!,
-      title,
-      value: Number(value),
-      type,
-      category,
-      date:
-        new Date(
-          `${date}T12:00:00`,
-        ).toISOString(),
-    });
+    setIsSaving(true);
 
-    setEditId(null);
+    try {
+      await updateTransaction({
+        id: editId,
+        title,
+        value: Number(value),
+        type,
+        category,
+        date:
+          new Date(
+            `${date}T12:00:00`,
+          ).toISOString(),
+      });
 
-    resetForm();
+      setEditId(null);
 
-    setShowModal(false);
+      resetForm();
+
+      setShowModal(false);
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   const monthlyMap = new Map<
@@ -723,19 +738,35 @@ export default function Dashboard() {
 
       <div className="dashboard-grid">
         <Card title="Fluxo Financeiro">
-          <FinanceChart
-            monthlyData={
-              monthlyData
-            }
-          />
+          {monthlyData.length === 0 ? (
+            <EmptyState
+              icon="📈"
+              title="Sem dados para o gráfico"
+              description="Adicione receitas e despesas para visualizar a evolução do seu fluxo financeiro."
+            />
+          ) : (
+            <FinanceChart
+              monthlyData={
+                monthlyData
+              }
+            />
+          )}
         </Card>
 
         <Card title="Despesas por Categoria">
-          <CategoryChart
-            data={
-              categoryData
-            }
-          />
+          {categoryData.length === 0 ? (
+            <EmptyState
+              icon="🏷️"
+              title="Nenhuma despesa categorizada"
+              description="Cadastre despesas para entender quais categorias mais impactam seu orçamento."
+            />
+          ) : (
+            <CategoryChart
+              data={
+                categoryData
+              }
+            />
+          )}
         </Card>
 
         <Card title="Resumo do Mês">
@@ -827,19 +858,45 @@ export default function Dashboard() {
             </select>
           </div>
 
-          <TransactionsList
-            transactions={
-              filteredTransactions
-            }
-            onEdit={
-              editTransaction
-            }
-            onDelete={(
-              id,
-            ) =>
-              setDeleteId(id)
-            }
-          />
+          {filteredTransactions.length === 0 ? (
+            <EmptyState
+              icon="📊"
+              title="Nenhuma transação encontrada"
+              description={
+                transactions.length === 0
+                  ? 'Adicione sua primeira receita ou despesa para começar a acompanhar sua vida financeira.'
+                  : 'Nenhum resultado corresponde aos filtros atuais. Ajuste a busca ou altere os filtros para visualizar suas transações.'
+              }
+              actionLabel={
+                transactions.length === 0
+                  ? '+ Nova transação'
+                  : undefined
+              }
+              onAction={
+                transactions.length === 0
+                  ? () => {
+                      setEditId(null);
+                      resetForm();
+                      setShowModal(true);
+                    }
+                  : undefined
+              }
+            />
+          ) : (
+            <TransactionsList
+              transactions={
+                filteredTransactions
+              }
+              onEdit={
+                editTransaction
+              }
+              onDelete={(
+                id,
+              ) =>
+                setDeleteId(id)
+              }
+            />
+          )}
         </Card>
       </div>
 
@@ -852,7 +909,11 @@ export default function Dashboard() {
         category={category}
         date={date}
         categories={categories}
+        isSaving={isSaving}
         onClose={() => {
+          if (isSaving)
+            return;
+
           setShowModal(false);
           setEditId(null);
         }}
@@ -872,43 +933,24 @@ export default function Dashboard() {
         }
       />
 
-      {deleteId && (
-        <div className="modal-overlay">
-          <div className="confirm-modal">
-            <h2>
-              Excluir transação?
-            </h2>
-
-            <p className="delete-text">
-              Essa ação não pode ser desfeita.
-            </p>
-
-            <div className="modal-actions">
-              <button
-                className="secondary-btn"
-                onClick={() =>
-                  setDeleteId(
-                    null,
-                  )
-                }
-              >
-                Cancelar
-              </button>
-
-              <button
-                className="danger-btn"
-                onClick={() =>
-                  removeTransaction(
-                    deleteId,
-                  )
-                }
-              >
-                Excluir
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        open={Boolean(deleteId)}
+        title="Excluir transação?"
+        description="Essa ação não pode ser desfeita."
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        loading={isDeleting}
+        onCancel={() =>
+          setDeleteId(null)
+        }
+        onConfirm={() => {
+          if (deleteId) {
+            removeTransaction(
+              deleteId,
+            );
+          }
+        }}
+      />
     </div>
   );
 }
