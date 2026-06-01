@@ -13,6 +13,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Transactions from './pages/Transactions';
 import Categories from './pages/Categories';
+import Goals from './pages/Goals';
 import Reports from './pages/Reports';
 
 export default function App() {
@@ -44,6 +45,11 @@ export default function App() {
           <Route
             path="/categories"
             element={<Categories />}
+          />
+
+          <Route
+            path="/goals"
+            element={<Goals />}
           />
 
           <Route

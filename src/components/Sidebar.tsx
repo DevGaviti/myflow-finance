@@ -2,6 +2,7 @@ import {
   LayoutDashboard,
   Receipt,
   Tags,
+  Target,
   BarChart3,
   ChevronLeft,
   ChevronRight,
@@ -33,6 +34,11 @@ const menuItems = [
     label: 'Categorias',
     icon: Tags,
     path: '/categories',
+  },
+  {
+    label: 'Metas',
+    icon: Target,
+    path: '/goals',
   },
   {
     label: 'Relatórios',

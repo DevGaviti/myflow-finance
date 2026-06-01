@@ -4,6 +4,8 @@ import {
   useState,
 } from 'react';
 
+import ThemeToggle from './ThemeToggle';
+
 import {
   useAuth,
 } from '../contexts/AuthContext';
@@ -109,14 +111,11 @@ export default function Topbar({
       </div>
 
       <div className="topbar-right">
-        <button
-          className="icon-btn"
-          onClick={toggleTheme}
-          title="Alternar tema"
+        <ThemeToggle
+          darkMode={darkMode}
+          onToggle={toggleTheme}
           disabled={isLoggingOut}
-        >
-          {darkMode ? '☀️' : '🌙'}
-        </button>
+        />
 
         <div className="topbar-menu-wrapper">
           <button
