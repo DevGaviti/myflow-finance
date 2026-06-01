@@ -2,6 +2,11 @@ import {
   useState,
 } from 'react';
 
+import {
+  Pencil,
+  Trash2,
+} from 'lucide-react';
+
 import Card from '../components/Card';
 import EmptyState from '../components/EmptyState';
 import ConfirmModal from '../components/ConfirmModal';
@@ -16,8 +21,12 @@ export default function Goals() {
     goals,
     isLoading,
     addGoal,
+    updateGoal,
     addGoalContribution,
+    updateGoalContribution,
+    removeGoalContribution,
     removeGoal,
+    getGoalContributions,
   } = useGoals();
 
   const [title, setTitle] =
@@ -40,6 +49,23 @@ export default function Goals() {
   ] = useState('');
 
   const [deadline, setDeadline] =
+    useState('');
+
+  const [editingGoalId, setEditingGoalId] =
+    useState<number | null>(null);
+
+  const [editTitle, setEditTitle] =
+    useState('');
+
+  const [editTargetAmount, setEditTargetAmount] =
+    useState('');
+
+  const [
+    formattedEditTargetAmount,
+    setFormattedEditTargetAmount,
+  ] = useState('');
+
+  const [editDeadline, setEditDeadline] =
     useState('');
 
   const [
@@ -71,11 +97,49 @@ export default function Goals() {
       .split('T')[0],
   );
 
+  const [
+    editingContributionId,
+    setEditingContributionId,
+  ] = useState<number | null>(null);
+
+  const [
+    editContributionAmount,
+    setEditContributionAmount,
+  ] = useState('');
+
+  const [
+    formattedEditContributionAmount,
+    setFormattedEditContributionAmount,
+  ] = useState('');
+
+  const [
+    editContributionNote,
+    setEditContributionNote,
+  ] = useState('');
+
+  const [
+    editContributionDate,
+    setEditContributionDate,
+  ] = useState('');
+
   const [deleteId, setDeleteId] =
     useState<number | null>(null);
 
+  const [
+    deleteContributionId,
+    setDeleteContributionId,
+  ] = useState<number | null>(null);
+
   const [isCreating, setIsCreating] =
     useState(false);
+
+  const [isUpdating, setIsUpdating] =
+    useState(false);
+
+  const [
+    isUpdatingContribution,
+    setIsUpdatingContribution,
+  ] = useState(false);
 
   const [
     isAddingContribution,
@@ -84,6 +148,11 @@ export default function Goals() {
 
   const [isDeleting, setIsDeleting] =
     useState(false);
+
+  const [
+    isDeletingContribution,
+    setIsDeletingContribution,
+  ] = useState(false);
 
   function formatCurrency(
     input: string,
@@ -94,6 +163,18 @@ export default function Goals() {
     const value =
       Number(numeric) / 100;
 
+    return value.toLocaleString(
+      'pt-BR',
+      {
+        style: 'currency',
+        currency: 'BRL',
+      },
+    );
+  }
+
+  function formatCurrencyFromNumber(
+    value: number,
+  ) {
     return value.toLocaleString(
       'pt-BR',
       {
@@ -145,6 +226,27 @@ export default function Goals() {
     );
   }
 
+  function handleEditTargetAmountChange(
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) {
+    const raw =
+      event.target.value.replace(
+        /\D/g,
+        '',
+      );
+
+    const numeric =
+      Number(raw) / 100;
+
+    setEditTargetAmount(
+      String(numeric),
+    );
+
+    setFormattedEditTargetAmount(
+      formatCurrency(raw),
+    );
+  }
+
   function handleContributionAmountChange(
     event: React.ChangeEvent<HTMLInputElement>,
   ) {
@@ -166,6 +268,27 @@ export default function Goals() {
     );
   }
 
+  function handleEditContributionAmountChange(
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) {
+    const raw =
+      event.target.value.replace(
+        /\D/g,
+        '',
+      );
+
+    const numeric =
+      Number(raw) / 100;
+
+    setEditContributionAmount(
+      String(numeric),
+    );
+
+    setFormattedEditContributionAmount(
+      formatCurrency(raw),
+    );
+  }
+
   function resetForm() {
     setTitle('');
     setTargetAmount('');
@@ -173,6 +296,14 @@ export default function Goals() {
     setCurrentAmount('');
     setFormattedCurrentAmount('');
     setDeadline('');
+  }
+
+  function resetEditForm() {
+    setEditingGoalId(null);
+    setEditTitle('');
+    setEditTargetAmount('');
+    setFormattedEditTargetAmount('');
+    setEditDeadline('');
   }
 
   function resetContributionForm() {
@@ -184,6 +315,78 @@ export default function Goals() {
       new Date()
         .toISOString()
         .split('T')[0],
+    );
+  }
+
+  function resetEditContributionForm() {
+    setEditingContributionId(null);
+    setEditContributionAmount('');
+    setFormattedEditContributionAmount('');
+    setEditContributionNote('');
+    setEditContributionDate('');
+  }
+
+  function handleOpenEditGoal(
+    goalId: number,
+  ) {
+    const goal =
+      goals.find(
+        (item) =>
+          item.id === goalId,
+      );
+
+    if (!goal) {
+      return;
+    }
+
+    setEditingGoalId(goal.id);
+    setEditTitle(goal.title);
+    setEditTargetAmount(
+      String(goal.targetAmount),
+    );
+    setFormattedEditTargetAmount(
+      formatCurrencyFromNumber(
+        goal.targetAmount,
+      ),
+    );
+    setEditDeadline(
+      goal.deadline ?? '',
+    );
+  }
+
+  function handleOpenEditContribution(
+    contributionId: number,
+  ) {
+    const contribution =
+      goals
+        .flatMap((goal) =>
+          getGoalContributions(goal.id),
+        )
+        .find(
+          (item) =>
+            item.id === contributionId,
+        );
+
+    if (!contribution) {
+      return;
+    }
+
+    setEditingContributionId(
+      contribution.id,
+    );
+    setEditContributionAmount(
+      String(contribution.amount),
+    );
+    setFormattedEditContributionAmount(
+      formatCurrencyFromNumber(
+        contribution.amount,
+      ),
+    );
+    setEditContributionNote(
+      contribution.note ?? '',
+    );
+    setEditContributionDate(
+      contribution.date,
     );
   }
 
@@ -208,6 +411,33 @@ export default function Goals() {
       resetForm();
     } finally {
       setIsCreating(false);
+    }
+  }
+
+  async function handleUpdateGoal() {
+    if (
+      !editingGoalId ||
+      !editTitle ||
+      !editTargetAmount
+    ) {
+      return;
+    }
+
+    setIsUpdating(true);
+
+    try {
+      await updateGoal({
+        id: editingGoalId,
+        title: editTitle,
+        targetAmount:
+          Number(editTargetAmount),
+        deadline:
+          editDeadline || null,
+      });
+
+      resetEditForm();
+    } finally {
+      setIsUpdating(false);
     }
   }
 
@@ -239,6 +469,48 @@ export default function Goals() {
     }
   }
 
+  async function handleUpdateContribution() {
+    if (
+      !editingContributionId ||
+      !editContributionAmount ||
+      !editContributionDate
+    ) {
+      return;
+    }
+
+    setIsUpdatingContribution(true);
+
+    try {
+      await updateGoalContribution({
+        id: editingContributionId,
+        amount:
+          Number(editContributionAmount),
+        note:
+          editContributionNote || null,
+        date:
+          editContributionDate,
+      });
+
+      resetEditContributionForm();
+    } finally {
+      setIsUpdatingContribution(false);
+    }
+  }
+
+  async function handleRemoveContribution(
+    id: number,
+  ) {
+    setIsDeletingContribution(true);
+
+    try {
+      await removeGoalContribution(id);
+
+      setDeleteContributionId(null);
+    } finally {
+      setIsDeletingContribution(false);
+    }
+  }
+
   async function handleRemoveGoal(
     id: number,
   ) {
@@ -257,6 +529,12 @@ export default function Goals() {
     goals.find(
       (goal) =>
         goal.id === contributionGoalId,
+    );
+
+  const selectedEditGoal =
+    goals.find(
+      (goal) =>
+        goal.id === editingGoalId,
     );
 
   return (
@@ -364,6 +642,14 @@ export default function Goals() {
                 0,
               );
 
+            const goalContributions =
+              getGoalContributions(
+                goal.id,
+              );
+
+            const latestContributions =
+              goalContributions.slice(0, 3);
+
             return (
               <div
                 key={goal.id}
@@ -378,14 +664,30 @@ export default function Goals() {
                     <h3>{goal.title}</h3>
                   </div>
 
-                  <button
-                    className="delete-btn"
-                    onClick={() =>
-                      setDeleteId(goal.id)
-                    }
-                  >
-                    ✕
-                  </button>
+                  <div className="transaction-buttons">
+                    <button
+                      type="button"
+                      className="edit-btn"
+                      title="Editar meta"
+                      onClick={() =>
+                        handleOpenEditGoal(
+                          goal.id,
+                        )
+                      }
+                    >
+                      <Pencil size={18} />
+                    </button>
+
+                    <button
+                      className="delete-btn"
+                      title="Excluir meta"
+                      onClick={() =>
+                        setDeleteId(goal.id)
+                      }
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="goal-values">
@@ -450,11 +752,164 @@ export default function Goals() {
                     + Aporte
                   </button>
                 </div>
+
+                <div className="goal-history">
+                  <div className="goal-history-header">
+                    <strong>
+                      Últimos aportes
+                    </strong>
+
+                    <span>
+                      {goalContributions.length}{' '}
+                      registro
+                      {goalContributions.length === 1
+                        ? ''
+                        : 's'}
+                    </span>
+                  </div>
+
+                  {latestContributions.length === 0 ? (
+                    <p className="goal-history-empty">
+                      Nenhum aporte registrado ainda.
+                    </p>
+                  ) : (
+                    <div className="goal-history-list">
+                      {latestContributions.map(
+                        (contribution) => (
+                          <div
+                            key={contribution.id}
+                            className="goal-history-item"
+                          >
+                            <div>
+                              <strong>
+                                {formatMoney(
+                                  contribution.amount,
+                                )}
+                              </strong>
+
+                              <span>
+                                {new Date(
+                                  `${contribution.date}T12:00:00`,
+                                ).toLocaleDateString(
+                                  'pt-BR',
+                                )}
+                              </span>
+
+                              {contribution.note && (
+                                <small>
+                                  {contribution.note}
+                                </small>
+                              )}
+                            </div>
+
+                            <div className="transaction-buttons">
+                              <button
+                                type="button"
+                                className="edit-btn"
+                                title="Editar aporte"
+                                onClick={() =>
+                                  handleOpenEditContribution(
+                                    contribution.id,
+                                  )
+                                }
+                              >
+                                <Pencil size={16} />
+                              </button>
+
+                              <button
+                                type="button"
+                                className="delete-btn"
+                                title="Remover aporte"
+                                onClick={() =>
+                                  setDeleteContributionId(
+                                    contribution.id,
+                                  )
+                                }
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })
         )}
       </div>
+
+      {editingGoalId && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h2>
+              Editar meta
+            </h2>
+
+            {selectedEditGoal && (
+              <p className="modal-description">
+                Ajuste os dados principais da meta sem alterar os aportes já registrados.
+              </p>
+            )}
+
+            <input
+              placeholder="Nome da meta"
+              value={editTitle}
+              disabled={isUpdating}
+              onChange={(event) =>
+                setEditTitle(
+                  event.target.value,
+                )
+              }
+            />
+
+            <input
+              placeholder="Valor alvo"
+              inputMode="numeric"
+              value={
+                formattedEditTargetAmount
+              }
+              disabled={isUpdating}
+              onChange={
+                handleEditTargetAmountChange
+              }
+            />
+
+            <input
+              type="date"
+              value={editDeadline}
+              disabled={isUpdating}
+              onChange={(event) =>
+                setEditDeadline(
+                  event.target.value,
+                )
+              }
+            />
+
+            <div className="modal-actions">
+              <button
+                className="secondary-btn"
+                disabled={isUpdating}
+                onClick={resetEditForm}
+              >
+                Cancelar
+              </button>
+
+              <LoadingButton
+                className="primary-btn"
+                isLoading={isUpdating}
+                onClick={handleUpdateGoal}
+              >
+                {isUpdating
+                  ? 'Salvando...'
+                  : 'Salvar alterações'}
+              </LoadingButton>
+            </div>
+          </div>
+        </div>
+      )}
 
       {contributionGoalId && (
         <div className="modal-overlay">
@@ -543,6 +998,88 @@ export default function Goals() {
         </div>
       )}
 
+      {editingContributionId && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h2>
+              Editar aporte
+            </h2>
+
+            <p className="modal-description">
+              Ajuste valor, observação ou data. O progresso da meta será recalculado automaticamente.
+            </p>
+
+            <input
+              placeholder="Valor do aporte"
+              inputMode="numeric"
+              value={
+                formattedEditContributionAmount
+              }
+              disabled={
+                isUpdatingContribution
+              }
+              onChange={
+                handleEditContributionAmountChange
+              }
+            />
+
+            <input
+              placeholder="Observação opcional"
+              value={editContributionNote}
+              disabled={
+                isUpdatingContribution
+              }
+              onChange={(event) =>
+                setEditContributionNote(
+                  event.target.value,
+                )
+              }
+            />
+
+            <input
+              type="date"
+              value={editContributionDate}
+              disabled={
+                isUpdatingContribution
+              }
+              onChange={(event) =>
+                setEditContributionDate(
+                  event.target.value,
+                )
+              }
+            />
+
+            <div className="modal-actions">
+              <button
+                className="secondary-btn"
+                disabled={
+                  isUpdatingContribution
+                }
+                onClick={
+                  resetEditContributionForm
+                }
+              >
+                Cancelar
+              </button>
+
+              <LoadingButton
+                className="primary-btn"
+                isLoading={
+                  isUpdatingContribution
+                }
+                onClick={
+                  handleUpdateContribution
+                }
+              >
+                {isUpdatingContribution
+                  ? 'Salvando...'
+                  : 'Salvar alterações'}
+              </LoadingButton>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ConfirmModal
         open={Boolean(deleteId)}
         title="Excluir meta?"
@@ -556,6 +1093,25 @@ export default function Goals() {
         onConfirm={() => {
           if (deleteId) {
             handleRemoveGoal(deleteId);
+          }
+        }}
+      />
+
+      <ConfirmModal
+        open={Boolean(deleteContributionId)}
+        title="Remover aporte?"
+        description="O valor será descontado do total acumulado da meta."
+        confirmText="Remover"
+        cancelText="Cancelar"
+        loading={isDeletingContribution}
+        onCancel={() =>
+          setDeleteContributionId(null)
+        }
+        onConfirm={() => {
+          if (deleteContributionId) {
+            handleRemoveContribution(
+              deleteContributionId,
+            );
           }
         }}
       />
