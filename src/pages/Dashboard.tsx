@@ -14,6 +14,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import EmptyState from '../components/EmptyState';
 
 import { useTransactions } from '../hook/useTransactions';
+import { useGoals } from '../hook/useGoals';
 
 import { formatMoney } from '../utils/format';
 
@@ -48,6 +49,11 @@ export default function Dashboard() {
     removeTransaction: removeTransactionHook,
     updateTransaction,
   } = useTransactions();
+
+  const {
+    goals,
+    isLoading: isGoalsLoading,
+  } = useGoals();
 
   const [showModal, setShowModal] =
     useState(false);
@@ -600,6 +606,62 @@ export default function Dashboard() {
     filteredIncome -
     filteredExpense;
 
+  const totalGoalsCurrent =
+    goals.reduce(
+      (acc, goal) =>
+        acc + goal.currentAmount,
+      0,
+    );
+
+  const totalGoalsTarget =
+    goals.reduce(
+      (acc, goal) =>
+        acc + goal.targetAmount,
+      0,
+    );
+
+  const goalsProgress =
+    totalGoalsTarget > 0
+      ? Math.min(
+          (totalGoalsCurrent /
+            totalGoalsTarget) *
+            100,
+          100,
+        )
+      : 0;
+
+  const mostAdvancedGoal =
+    goals.length > 0
+      ? [...goals].sort(
+          (a, b) => {
+            const progressA =
+              a.targetAmount > 0
+                ? a.currentAmount /
+                  a.targetAmount
+                : 0;
+
+            const progressB =
+              b.targetAmount > 0
+                ? b.currentAmount /
+                  b.targetAmount
+                : 0;
+
+            return progressB - progressA;
+          },
+        )[0]
+      : null;
+
+  const mostAdvancedGoalProgress =
+    mostAdvancedGoal &&
+    mostAdvancedGoal.targetAmount > 0
+      ? Math.min(
+          (mostAdvancedGoal.currentAmount /
+            mostAdvancedGoal.targetAmount) *
+            100,
+          100,
+        )
+      : 0;
+
   const kpis = [
     {
       label: 'Saldo',
@@ -631,7 +693,36 @@ export default function Dashboard() {
     },
   ];
 
-  if (isLoading) {
+  const goalsKpis = [
+    {
+      label: 'Metas Ativas',
+      value: String(goals.length),
+    },
+    {
+      label: 'Em Metas',
+      value:
+        formatMoney(
+          totalGoalsCurrent,
+        ),
+    },
+    {
+      label: 'Alvo Total',
+      value:
+        formatMoney(
+          totalGoalsTarget,
+        ),
+    },
+    {
+      label: 'Progresso',
+      value:
+        `${goalsProgress.toFixed(0)}%`,
+    },
+  ];
+
+  if (
+    isLoading ||
+    isGoalsLoading
+  ) {
     return <PageLoader />;
   }
 
@@ -736,6 +827,24 @@ export default function Dashboard() {
         )}
       </div>
 
+      <div className="kpi-grid">
+        {goalsKpis.map(
+          (item) => (
+            <KPICard
+              key={
+                item.label
+              }
+              label={
+                item.label
+              }
+              value={
+                item.value
+              }
+            />
+          ),
+        )}
+      </div>
+
       <div className="dashboard-grid">
         <Card title="Fluxo Financeiro">
           {monthlyData.length === 0 ? (
@@ -807,6 +916,76 @@ export default function Dashboard() {
               </span>
             </div>
           </div>
+        </Card>
+      </div>
+
+      <div className="transactions-wrapper">
+        <Card title="Resumo das Metas">
+          {goals.length === 0 ? (
+            <EmptyState
+              icon="🎯"
+              title="Nenhuma meta cadastrada"
+              description="Crie metas financeiras para acompanhar sua evolução patrimonial e seus principais objetivos."
+            />
+          ) : (
+            <div className="summary-list">
+              <div className="summary-item">
+                <span className="summary-label">
+                  Total acumulado
+                </span>
+
+                <span className="summary-value income">
+                  {formatMoney(
+                    totalGoalsCurrent,
+                  )}
+                </span>
+              </div>
+
+              <div className="summary-item">
+                <span className="summary-label">
+                  Valor alvo total
+                </span>
+
+                <span className="summary-value">
+                  {formatMoney(
+                    totalGoalsTarget,
+                  )}
+                </span>
+              </div>
+
+              <div className="summary-item">
+                <span className="summary-label">
+                  Progresso geral
+                </span>
+
+                <span className="summary-value">
+                  {goalsProgress.toFixed(1)}%
+                </span>
+              </div>
+
+              {mostAdvancedGoal && (
+                <div className="summary-item">
+                  <span className="summary-label">
+                    Meta mais avançada
+                  </span>
+
+                  <span className="summary-value">
+                    {mostAdvancedGoal.title}{' '}
+                    ({mostAdvancedGoalProgress.toFixed(0)}%)
+                  </span>
+                </div>
+              )}
+
+              <div className="goal-progress">
+                <div
+                  className="goal-progress-bar"
+                  style={{
+                    width: `${goalsProgress}%`,
+                  }}
+                />
+              </div>
+            </div>
+          )}
         </Card>
       </div>
 
