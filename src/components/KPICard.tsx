@@ -14,13 +14,13 @@ type KPIVariant =
 type Props = {
   label: string;
   value: string;
-  variant: KPIVariant;
+  variant?: KPIVariant;
 };
 
 export default function KPICard({
   label,
   value,
-  variant,
+  variant = 'balance',
 }: Props) {
   function getIcon() {
     switch (variant) {
