@@ -5,64 +5,59 @@ import {
   Receipt,
 } from 'lucide-react';
 
+type KPIVariant =
+  | 'balance'
+  | 'income'
+  | 'expense'
+  | 'transactions';
+
 type Props = {
   label: string;
   value: string;
+  variant: KPIVariant;
 };
 
 export default function KPICard({
   label,
   value,
+  variant,
 }: Props) {
   function getIcon() {
-    switch (label) {
-      case 'Saldo':
-        return (
-          <Wallet size={22} />
-        );
+    switch (variant) {
+      case 'balance':
+        return <Wallet size={22} />;
 
-      case 'Entradas':
-      case 'Receitas':
-        return (
-          <TrendingUp size={22} />
-        );
+      case 'income':
+        return <TrendingUp size={22} />;
 
-      case 'Despesas':
-        return (
-          <TrendingDown size={22} />
-        );
+      case 'expense':
+        return <TrendingDown size={22} />;
 
-      case 'Transações':
-        return (
-          <Receipt size={22} />
-        );
+      case 'transactions':
+        return <Receipt size={22} />;
 
       default:
-        return (
-          <Wallet size={22} />
-        );
+        return <Wallet size={22} />;
     }
   }
 
   return (
-    <div className="kpi-card">
-      <div className="kpi-top">
+    <div
+      className={`kpi-card kpi-card-${variant}`}
+    >
+      <div className="kpi-header">
         <div className="kpi-icon">
           {getIcon()}
         </div>
 
-        <div className="kpi-badge">
-          +12%
-        </div>
+        <span className="kpi-label">
+          {label}
+        </span>
       </div>
 
-      <p className="kpi-label">
-        {label}
-      </p>
-
-      <h2 className="kpi-value">
+      <strong className="kpi-value">
         {value}
-      </h2>
+      </strong>
     </div>
   );
 }

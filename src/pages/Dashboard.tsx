@@ -669,6 +669,7 @@ export default function Dashboard() {
         formatMoney(
           filteredBalance,
         ),
+      variant: 'balance' as const,
     },
     {
       label: 'Entradas',
@@ -676,6 +677,7 @@ export default function Dashboard() {
         formatMoney(
           filteredIncome,
         ),
+      variant: 'income' as const,
     },
     {
       label: 'Despesas',
@@ -683,6 +685,7 @@ export default function Dashboard() {
         formatMoney(
           filteredExpense,
         ),
+      variant: 'expense' as const,
     },
     {
       label:
@@ -690,32 +693,7 @@ export default function Dashboard() {
       value: String(
         filteredByPeriod.length,
       ),
-    },
-  ];
-
-  const goalsKpis = [
-    {
-      label: 'Metas Ativas',
-      value: String(goals.length),
-    },
-    {
-      label: 'Em Metas',
-      value:
-        formatMoney(
-          totalGoalsCurrent,
-        ),
-    },
-    {
-      label: 'Alvo Total',
-      value:
-        formatMoney(
-          totalGoalsTarget,
-        ),
-    },
-    {
-      label: 'Progresso',
-      value:
-        `${goalsProgress.toFixed(0)}%`,
+      variant: 'transactions' as const,
     },
   ];
 
@@ -822,27 +800,82 @@ export default function Dashboard() {
               value={
                 item.value
               }
+              variant={
+                item.variant
+              }
             />
           ),
         )}
       </div>
 
-      <div className="kpi-grid">
-        {goalsKpis.map(
-          (item) => (
-            <KPICard
-              key={
-                item.label
-              }
-              label={
-                item.label
-              }
-              value={
-                item.value
-              }
+      <div className="transactions-wrapper">
+        <Card title="Resumo das Metas">
+          {goals.length === 0 ? (
+            <EmptyState
+              icon="🎯"
+              title="Nenhuma meta cadastrada"
+              description="Crie metas financeiras para acompanhar sua evolução patrimonial e seus principais objetivos."
             />
-          ),
-        )}
+          ) : (
+            <div className="summary-list">
+              <div className="summary-item">
+                <span className="summary-label">
+                  Total acumulado
+                </span>
+
+                <span className="summary-value income">
+                  {formatMoney(
+                    totalGoalsCurrent,
+                  )}
+                </span>
+              </div>
+
+              <div className="summary-item">
+                <span className="summary-label">
+                  Valor alvo total
+                </span>
+
+                <span className="summary-value">
+                  {formatMoney(
+                    totalGoalsTarget,
+                  )}
+                </span>
+              </div>
+
+              <div className="summary-item">
+                <span className="summary-label">
+                  Progresso geral
+                </span>
+
+                <span className="summary-value">
+                  {goalsProgress.toFixed(1)}%
+                </span>
+              </div>
+
+              {mostAdvancedGoal && (
+                <div className="summary-item">
+                  <span className="summary-label">
+                    Meta mais avançada
+                  </span>
+
+                  <span className="summary-value">
+                    {mostAdvancedGoal.title}{' '}
+                    ({mostAdvancedGoalProgress.toFixed(0)}%)
+                  </span>
+                </div>
+              )}
+
+              <div className="goal-progress">
+                <div
+                  className="goal-progress-bar"
+                  style={{
+                    width: `${goalsProgress}%`,
+                  }}
+                />
+              </div>
+            </div>
+          )}
+        </Card>
       </div>
 
       <div className="dashboard-grid">
@@ -916,76 +949,6 @@ export default function Dashboard() {
               </span>
             </div>
           </div>
-        </Card>
-      </div>
-
-      <div className="transactions-wrapper">
-        <Card title="Resumo das Metas">
-          {goals.length === 0 ? (
-            <EmptyState
-              icon="🎯"
-              title="Nenhuma meta cadastrada"
-              description="Crie metas financeiras para acompanhar sua evolução patrimonial e seus principais objetivos."
-            />
-          ) : (
-            <div className="summary-list">
-              <div className="summary-item">
-                <span className="summary-label">
-                  Total acumulado
-                </span>
-
-                <span className="summary-value income">
-                  {formatMoney(
-                    totalGoalsCurrent,
-                  )}
-                </span>
-              </div>
-
-              <div className="summary-item">
-                <span className="summary-label">
-                  Valor alvo total
-                </span>
-
-                <span className="summary-value">
-                  {formatMoney(
-                    totalGoalsTarget,
-                  )}
-                </span>
-              </div>
-
-              <div className="summary-item">
-                <span className="summary-label">
-                  Progresso geral
-                </span>
-
-                <span className="summary-value">
-                  {goalsProgress.toFixed(1)}%
-                </span>
-              </div>
-
-              {mostAdvancedGoal && (
-                <div className="summary-item">
-                  <span className="summary-label">
-                    Meta mais avançada
-                  </span>
-
-                  <span className="summary-value">
-                    {mostAdvancedGoal.title}{' '}
-                    ({mostAdvancedGoalProgress.toFixed(0)}%)
-                  </span>
-                </div>
-              )}
-
-              <div className="goal-progress">
-                <div
-                  className="goal-progress-bar"
-                  style={{
-                    width: `${goalsProgress}%`,
-                  }}
-                />
-              </div>
-            </div>
-          )}
         </Card>
       </div>
 
