@@ -18,6 +18,10 @@ import type {
   Transaction,
 } from '../types/transaction';
 
+import type {
+  ParsedCsvTransaction,
+} from '../utils/csvTransactionParser';
+
 type SupabaseTransaction = {
   id: number;
   title: string;
@@ -27,6 +31,17 @@ type SupabaseTransaction = {
   date: string;
   created_at: string;
   user_id: string;
+  source: string;
+  external_id: string | null;
+  import_batch_id: string | null;
+};
+
+export type ImportTransactionsResult = {
+  total: number;
+
+  imported: number;
+
+  duplicated: number;
 };
 
 const MIN_LOADING_TIME = 350;
@@ -65,6 +80,44 @@ function mapToSupabase(
     category: transaction.category,
     date: transaction.date.split('T')[0],
     user_id: userId,
+    source: 'manual',
+    external_id: null,
+    import_batch_id: null,
+  };
+}
+
+function mapImportedTransactionToSupabase({
+  transaction,
+  userId,
+  importBatchId,
+}: {
+  transaction: ParsedCsvTransaction;
+  userId: string;
+  importBatchId: string;
+}) {
+  return {
+    title: transaction.description,
+
+    amount: transaction.amount,
+
+    type: transaction.type,
+
+    category:
+      transaction.type === 'income'
+        ? 'Receitas'
+        : 'Sem categoria',
+
+    date: transaction.date,
+
+    user_id: userId,
+
+    source: 'csv',
+
+    external_id:
+      transaction.externalId,
+
+    import_batch_id:
+      importBatchId,
   };
 }
 
@@ -181,6 +234,130 @@ export function useTransactions() {
     notifySuccess(
       'Transação adicionada com sucesso!',
     );
+  }
+
+  async function importTransactions({
+    parsedTransactions,
+    importBatchId,
+  }: {
+    parsedTransactions: ParsedCsvTransaction[];
+    importBatchId: string;
+  }): Promise<ImportTransactionsResult | null> {
+    if (!user) {
+      handleError(
+        'Usuário não autenticado.',
+      );
+      return null;
+    }
+
+    if (parsedTransactions.length === 0) {
+      return {
+        total: 0,
+        imported: 0,
+        duplicated: 0,
+      };
+    }
+
+    const externalIds =
+      parsedTransactions.map(
+        (transaction) =>
+          transaction.externalId,
+      );
+
+    const {
+      data: existingTransactions,
+      error: existingError,
+    } = await supabase
+      .from('transactions')
+      .select('external_id')
+      .eq('user_id', user.id)
+      .eq('source', 'csv')
+      .in('external_id', externalIds);
+
+    if (existingError) {
+      handleError(
+        existingError.message,
+      );
+
+      return null;
+    }
+
+    const existingExternalIds =
+      new Set(
+        (existingTransactions ?? [])
+          .map((item) => item.external_id)
+          .filter(Boolean),
+      );
+
+    const transactionsToImport =
+      parsedTransactions.filter(
+        (transaction) =>
+          !existingExternalIds.has(
+            transaction.externalId,
+          ),
+      );
+
+    if (transactionsToImport.length === 0) {
+      notifyError(
+        'Todas as transações desse arquivo já foram importadas.',
+      );
+
+      return {
+        total:
+          parsedTransactions.length,
+
+        imported: 0,
+
+        duplicated:
+          parsedTransactions.length,
+      };
+    }
+
+    const payload =
+      transactionsToImport.map(
+        (transaction) =>
+          mapImportedTransactionToSupabase({
+            transaction,
+            userId: user.id,
+            importBatchId,
+          }),
+      );
+
+    const { data, error } =
+      await supabase
+        .from('transactions')
+        .insert(payload)
+        .select();
+
+    if (error) {
+      handleError(error.message);
+      return null;
+    }
+
+    setTransactions((prev) => [
+      ...(data ?? []).map(
+        mapFromSupabase,
+      ),
+      ...prev,
+    ]);
+
+    const result = {
+      total:
+        parsedTransactions.length,
+
+      imported:
+        transactionsToImport.length,
+
+      duplicated:
+        parsedTransactions.length -
+        transactionsToImport.length,
+    };
+
+    notifySuccess(
+      `${result.imported} transações importadas com sucesso!`,
+    );
+
+    return result;
   }
 
   async function removeTransaction(
@@ -311,6 +488,8 @@ export function useTransactions() {
     fetchTransactions,
 
     addTransaction,
+
+    importTransactions,
 
     removeTransaction,
 

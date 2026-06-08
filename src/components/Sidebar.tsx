@@ -5,6 +5,7 @@ import {
   Target,
   BarChart3,
   Wallet,
+  Upload,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -45,6 +46,11 @@ const menuItems = [
     label: 'Planejamento',
     icon: Wallet,
     path: '/planning',
+  },
+  {
+    label: 'Importações',
+    icon: Upload,
+    path: '/imports',
   },
   {
     label: 'Relatórios',

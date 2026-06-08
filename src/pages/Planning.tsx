@@ -5,25 +5,17 @@ import {
 
 import type {
   FormEvent,
-  ReactNode,
 } from 'react';
 
 import {
   Save,
-  TrendingUp,
-  TrendingDown,
-  Wallet,
-  PiggyBank,
-  ShieldCheck,
   Target,
   CalendarDays,
   AlertTriangle,
   CheckCircle2,
   XCircle,
   SlidersHorizontal,
-  Banknote,
   Star,
-  Gauge,
   Calculator,
 } from 'lucide-react';
 
@@ -31,8 +23,11 @@ import Card from '../components/Card';
 import EmptyState from '../components/EmptyState';
 import LoadingButton from '../components/LoadingButton';
 
+import PlanningOverview from '../components/planning/PlanningOverview';
+import CollapsibleSection from '../components/planning/CollapsibleSection';
 import ScenarioList from '../components/planning/ScenarioList';
 import SimulationResultCard from '../components/planning/SimulationResultCard';
+import CashFlowProjectionCard from '../components/planning/CashFlowProjectionCard';
 
 import { useFinancialProfile } from '../hook/useFinancialProfile';
 import { useGoals } from '../hook/useGoals';
@@ -50,6 +45,10 @@ import {
   simulatePurchaseImpact,
   type FinancialSimulationResult,
 } from '../utils/financialSimulator';
+
+import {
+  generateCashFlowProjection,
+} from '../utils/cashFlowProjection';
 
 type FinancialProfileField =
   keyof FinancialProfileFormData;
@@ -207,7 +206,6 @@ export function Planning() {
     diagnosisTitle,
     diagnosisDescription,
     activeGoals,
-    goalsCompletionPercentage,
     financialScore,
     totalMissingForGoals,
     monthsToCompleteAllGoals,
@@ -218,6 +216,18 @@ export function Planning() {
     planningSettingsForm,
     goals,
   });
+
+  const cashFlowProjection =
+    generateCashFlowProjection({
+      months: 12,
+      totalIncome,
+      fixedExpenses,
+      currentSavings:
+        formData.current_savings,
+      goalsBudget,
+      reserveBudget,
+      freeBudget,
+    });
 
   useEffect(() => {
     if (!profile) return;
@@ -526,226 +536,86 @@ export function Planning() {
         </h1>
 
         <p className="dashboard-subtitle">
-          Organize suas receitas, despesas fixas e reserva para entender sua capacidade real de economia.
+          Visão consolidada da sua saúde financeira, metas, cenários e projeção futura.
         </p>
       </div>
 
-      <Card
-        title="Perfil financeiro"
-        subtitle="Digite os valores reais. Exemplo: 1000 representa R$ 1.000,00."
-      >
-        <form
-          onSubmit={handleSubmit}
-          className="planning-form"
-        >
-          <section className="planning-section">
-            <div className="planning-section-header">
-              <span className="goal-eyebrow">
-                Receitas mensais
-              </span>
-            </div>
-
-            <div className="planning-input-grid two">
-              <MoneyInput
-                label="Salário"
-                value={displayValues.salary}
-                onChange={(value) =>
-                  handleChange(
-                    'salary',
-                    value,
-                  )
-                }
-                onBlur={() =>
-                  handleBlur('salary')
-                }
-              />
-
-              <MoneyInput
-                label="Renda extra"
-                value={
-                  displayValues.extra_income
-                }
-                onChange={(value) =>
-                  handleChange(
-                    'extra_income',
-                    value,
-                  )
-                }
-                onBlur={() =>
-                  handleBlur(
-                    'extra_income',
-                  )
-                }
-              />
-            </div>
-          </section>
-
-          <section className="planning-section">
-            <div className="planning-section-header">
-              <span className="goal-eyebrow">
-                Despesas fixas
-              </span>
-            </div>
-
-            <div className="planning-input-grid five">
-              <MoneyInput
-                label="Aluguel"
-                value={displayValues.rent}
-                onChange={(value) =>
-                  handleChange(
-                    'rent',
-                    value,
-                  )
-                }
-                onBlur={() =>
-                  handleBlur('rent')
-                }
-              />
-
-              <MoneyInput
-                label="Energia"
-                value={displayValues.energy}
-                onChange={(value) =>
-                  handleChange(
-                    'energy',
-                    value,
-                  )
-                }
-                onBlur={() =>
-                  handleBlur('energy')
-                }
-              />
-
-              <MoneyInput
-                label="Água"
-                value={displayValues.water}
-                onChange={(value) =>
-                  handleChange(
-                    'water',
-                    value,
-                  )
-                }
-                onBlur={() =>
-                  handleBlur('water')
-                }
-              />
-
-              <MoneyInput
-                label="Internet"
-                value={
-                  displayValues.internet
-                }
-                onChange={(value) =>
-                  handleChange(
-                    'internet',
-                    value,
-                  )
-                }
-                onBlur={() =>
-                  handleBlur(
-                    'internet',
-                  )
-                }
-              />
-
-              <MoneyInput
-                label="Financiamento"
-                value={
-                  displayValues.financing
-                }
-                onChange={(value) =>
-                  handleChange(
-                    'financing',
-                    value,
-                  )
-                }
-                onBlur={() =>
-                  handleBlur(
-                    'financing',
-                  )
-                }
-              />
-            </div>
-          </section>
-
-          <section className="planning-section">
-            <div className="planning-section-header">
-              <span className="goal-eyebrow">
-                Reserva financeira
-              </span>
-            </div>
-
-            <div className="planning-input-grid two">
-              <MoneyInput
-                label="Reserva atual"
-                value={
-                  displayValues.current_savings
-                }
-                onChange={(value) =>
-                  handleChange(
-                    'current_savings',
-                    value,
-                  )
-                }
-                onBlur={() =>
-                  handleBlur(
-                    'current_savings',
-                  )
-                }
-              />
-            </div>
-          </section>
-
-          <div className="planning-actions">
-            <LoadingButton
-              className="primary-btn"
-              isLoading={saving}
-            >
-              <Save size={18} />
-              {saving
-                ? 'Salvando...'
-                : 'Salvar perfil'}
-            </LoadingButton>
-          </div>
-        </form>
-      </Card>
+      <PlanningOverview
+        score={financialScore.score}
+        scoreTitle={financialScore.title}
+        savingCapacity={savingCapacity}
+        currentSavings={formData.current_savings}
+        primaryGoalTitle={
+          primaryGoalProjection?.title
+        }
+        primaryGoalRemainingAmount={
+          primaryGoalProjection?.remainingAmount
+        }
+        primaryGoalMonths={
+          primaryGoalProjection?.monthsToComplete
+        }
+      />
 
       <Card
-        title="Score financeiro"
-        subtitle="Pontuação automática baseada em renda, despesas, reserva e metas."
+        title="Diagnóstico financeiro"
+        subtitle="Análise automática baseada no seu perfil financeiro atual."
       >
         <div
-          className={`planning-diagnosis-card ${
-            financialScore.level === 'critical'
-              ? 'critical'
-              : financialScore.level === 'attention'
-                ? 'attention'
-                : 'healthy'
-          }`}
+          className={`planning-diagnosis-card ${diagnosisStatus}`}
         >
           <div className="planning-diagnosis-header">
             <div>
               <span className="goal-eyebrow">
-                Score atual
+                Status geral
               </span>
 
               <div className="goal-values">
                 <strong>
-                  {financialScore.score}/100 · {financialScore.title}
+                  {diagnosisTitle}
                 </strong>
 
                 <span>
-                  Progresso das metas: {goalsCompletionPercentage.toFixed(1)}%
+                  {diagnosisDescription}
                 </span>
               </div>
             </div>
 
             <div className="planning-metric-icon">
-              <Gauge size={20} />
+              {diagnosisStatus ===
+                'healthy' && (
+                <CheckCircle2 size={20} />
+              )}
+
+              {diagnosisStatus ===
+                'attention' && (
+                <AlertTriangle size={20} />
+              )}
+
+              {diagnosisStatus ===
+                'critical' && (
+                <XCircle size={20} />
+              )}
             </div>
           </div>
 
-          {financialScore.recommendations.length > 0 ? (
+          {diagnosisIssues.length > 0 ? (
+            <div className="planning-alert-list">
+              {diagnosisIssues.map((issue) => (
+                <p
+                  key={issue}
+                  className="planning-alert-item"
+                >
+                  • {issue}
+                </p>
+              ))}
+            </div>
+          ) : (
+            <p className="planning-alert-item">
+              Nenhum alerta financeiro relevante identificado neste momento.
+            </p>
+          )}
+
+          {financialScore.recommendations.length > 0 && (
             <div className="planning-alert-list">
               {financialScore.recommendations.map((recommendation) => (
                 <p
@@ -756,12 +626,65 @@ export function Planning() {
                 </p>
               ))}
             </div>
-          ) : (
-            <p className="planning-alert-item">
-              Sua estrutura financeira está em boa condição dentro dos critérios atuais.
-            </p>
           )}
         </div>
+      </Card>
+
+      {primaryGoalProjection && (
+        <Card
+          title="Objetivo principal"
+          subtitle="Resumo da sua meta mais importante no planejamento atual."
+        >
+          <div className="planning-diagnosis-card healthy">
+            <div className="planning-diagnosis-header">
+              <div>
+                <span className="goal-eyebrow">
+                  Meta principal
+                </span>
+
+                <div className="goal-values">
+                  <strong>
+                    {primaryGoalProjection.title}
+                  </strong>
+
+                  <span>
+                    Faltam{' '}
+                    {formatMoney(
+                      primaryGoalProjection.remainingAmount,
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              <div className="planning-metric-icon">
+                <Star size={20} />
+              </div>
+            </div>
+
+            <p className="planning-alert-item">
+              Com{' '}
+              {formatMoney(goalsBudget)} por mês destinado a metas, sua meta principal será atingida em aproximadamente{' '}
+              <strong>
+                {primaryGoalProjection.monthsToComplete}{' '}
+                meses
+              </strong>
+              , com previsão para{' '}
+              <strong>
+                {primaryGoalProjection.projectedDate}
+              </strong>
+              .
+            </p>
+          </div>
+        </Card>
+      )}
+
+      <Card
+        title="Fluxo de caixa futuro"
+        subtitle="Projeção de 12 meses considerando renda, despesas, reserva e metas."
+      >
+        <CashFlowProjectionCard
+          projection={cashFlowProjection}
+        />
       </Card>
 
       <Card
@@ -840,20 +763,202 @@ export function Planning() {
         />
       </Card>
 
-      <Card
-        title="Motor de planejamento"
-        subtitle="Defina como a sobra mensal será distribuída entre metas, reserva e uso livre."
+      <CollapsibleSection
+        title="Configurações"
+        subtitle="Edite seu perfil financeiro e a distribuição da sobra mensal."
       >
-        <form
-          onSubmit={
-            handleSavePlanningSettings
-          }
-          className="planning-form"
-        >
+        <div className="planning-form">
           <section className="planning-section">
             <div className="planning-section-header">
               <span className="goal-eyebrow">
-                Distribuição da sobra mensal
+                Perfil financeiro
+              </span>
+
+              <span className="planning-input-label">
+                Base dos cálculos do planejamento
+              </span>
+            </div>
+
+            <form
+              onSubmit={handleSubmit}
+              className="planning-form"
+            >
+              <section className="planning-section">
+                <div className="planning-section-header">
+                  <span className="goal-eyebrow">
+                    Receitas mensais
+                  </span>
+                </div>
+
+                <div className="planning-input-grid two">
+                  <MoneyInput
+                    label="Salário"
+                    value={displayValues.salary}
+                    onChange={(value) =>
+                      handleChange(
+                        'salary',
+                        value,
+                      )
+                    }
+                    onBlur={() =>
+                      handleBlur('salary')
+                    }
+                  />
+
+                  <MoneyInput
+                    label="Renda extra"
+                    value={
+                      displayValues.extra_income
+                    }
+                    onChange={(value) =>
+                      handleChange(
+                        'extra_income',
+                        value,
+                      )
+                    }
+                    onBlur={() =>
+                      handleBlur(
+                        'extra_income',
+                      )
+                    }
+                  />
+                </div>
+              </section>
+
+              <section className="planning-section">
+                <div className="planning-section-header">
+                  <span className="goal-eyebrow">
+                    Despesas fixas
+                  </span>
+                </div>
+
+                <div className="planning-input-grid five">
+                  <MoneyInput
+                    label="Aluguel"
+                    value={displayValues.rent}
+                    onChange={(value) =>
+                      handleChange(
+                        'rent',
+                        value,
+                      )
+                    }
+                    onBlur={() =>
+                      handleBlur('rent')
+                    }
+                  />
+
+                  <MoneyInput
+                    label="Energia"
+                    value={displayValues.energy}
+                    onChange={(value) =>
+                      handleChange(
+                        'energy',
+                        value,
+                      )
+                    }
+                    onBlur={() =>
+                      handleBlur('energy')
+                    }
+                  />
+
+                  <MoneyInput
+                    label="Água"
+                    value={displayValues.water}
+                    onChange={(value) =>
+                      handleChange(
+                        'water',
+                        value,
+                      )
+                    }
+                    onBlur={() =>
+                      handleBlur('water')
+                    }
+                  />
+
+                  <MoneyInput
+                    label="Internet"
+                    value={
+                      displayValues.internet
+                    }
+                    onChange={(value) =>
+                      handleChange(
+                        'internet',
+                        value,
+                      )
+                    }
+                    onBlur={() =>
+                      handleBlur(
+                        'internet',
+                      )
+                    }
+                  />
+
+                  <MoneyInput
+                    label="Financiamento"
+                    value={
+                      displayValues.financing
+                    }
+                    onChange={(value) =>
+                      handleChange(
+                        'financing',
+                        value,
+                      )
+                    }
+                    onBlur={() =>
+                      handleBlur(
+                        'financing',
+                      )
+                    }
+                  />
+                </div>
+              </section>
+
+              <section className="planning-section">
+                <div className="planning-section-header">
+                  <span className="goal-eyebrow">
+                    Reserva financeira
+                  </span>
+                </div>
+
+                <div className="planning-input-grid two">
+                  <MoneyInput
+                    label="Reserva atual"
+                    value={
+                      displayValues.current_savings
+                    }
+                    onChange={(value) =>
+                      handleChange(
+                        'current_savings',
+                        value,
+                      )
+                    }
+                    onBlur={() =>
+                      handleBlur(
+                        'current_savings',
+                      )
+                    }
+                  />
+                </div>
+              </section>
+
+              <div className="planning-actions">
+                <LoadingButton
+                  className="primary-btn"
+                  isLoading={saving}
+                >
+                  <Save size={18} />
+                  {saving
+                    ? 'Salvando...'
+                    : 'Salvar perfil'}
+                </LoadingButton>
+              </div>
+            </form>
+          </section>
+
+          <section className="planning-section">
+            <div className="planning-section-header">
+              <span className="goal-eyebrow">
+                Motor de planejamento
               </span>
 
               <span className="planning-input-label">
@@ -861,354 +966,232 @@ export function Planning() {
               </span>
             </div>
 
-            <div className="planning-input-grid two">
-              <PercentInput
-                label="Metas"
-                value={
-                  planningSettingsForm.goals_percentage
-                }
-                onChange={(value) =>
-                  handlePlanningSettingsChange(
-                    'goals_percentage',
-                    value,
-                  )
-                }
-              />
-
-              <PercentInput
-                label="Reserva"
-                value={
-                  planningSettingsForm.reserve_percentage
-                }
-                onChange={(value) =>
-                  handlePlanningSettingsChange(
-                    'reserve_percentage',
-                    value,
-                  )
-                }
-              />
-
-              <PercentInput
-                label="Uso livre"
-                value={
-                  planningSettingsForm.free_percentage
-                }
-                onChange={(value) =>
-                  handlePlanningSettingsChange(
-                    'free_percentage',
-                    value,
-                  )
-                }
-              />
-            </div>
-          </section>
-
-          <div className="planning-actions">
-            <LoadingButton
-              className="primary-btn"
-              isLoading={savingSettings}
+            <form
+              onSubmit={
+                handleSavePlanningSettings
+              }
+              className="planning-form"
             >
-              <SlidersHorizontal size={18} />
-              {savingSettings
-                ? 'Salvando...'
-                : 'Salvar motor'}
-            </LoadingButton>
-          </div>
-        </form>
-      </Card>
+              <div className="planning-input-grid two">
+                <PercentInput
+                  label="Metas"
+                  value={
+                    planningSettingsForm.goals_percentage
+                  }
+                  onChange={(value) =>
+                    handlePlanningSettingsChange(
+                      'goals_percentage',
+                      value,
+                    )
+                  }
+                />
 
-      {primaryGoalProjection && (
-        <Card
-          title="Objetivo principal"
-          subtitle="Resumo da sua meta mais importante no planejamento atual."
-        >
-          <div className="planning-diagnosis-card healthy">
-            <div className="planning-diagnosis-header">
-              <div>
-                <span className="goal-eyebrow">
-                  Meta principal
-                </span>
+                <PercentInput
+                  label="Reserva"
+                  value={
+                    planningSettingsForm.reserve_percentage
+                  }
+                  onChange={(value) =>
+                    handlePlanningSettingsChange(
+                      'reserve_percentage',
+                      value,
+                    )
+                  }
+                />
 
-                <div className="goal-values">
-                  <strong>
-                    {primaryGoalProjection.title}
-                  </strong>
-
-                  <span>
-                    Faltam{' '}
-                    {formatMoney(
-                      primaryGoalProjection.remainingAmount,
-                    )}
-                  </span>
-                </div>
+                <PercentInput
+                  label="Uso livre"
+                  value={
+                    planningSettingsForm.free_percentage
+                  }
+                  onChange={(value) =>
+                    handlePlanningSettingsChange(
+                      'free_percentage',
+                      value,
+                    )
+                  }
+                />
               </div>
 
-              <div className="planning-metric-icon">
-                <Star size={20} />
-              </div>
-            </div>
-
-            <p className="planning-alert-item">
-              Com{' '}
-              {formatMoney(goalsBudget)} por mês destinado a metas, sua meta principal será atingida em aproximadamente{' '}
-              <strong>
-                {primaryGoalProjection.monthsToComplete}{' '}
-                meses
-              </strong>
-              , com previsão para{' '}
-              <strong>
-                {primaryGoalProjection.projectedDate}
-              </strong>
-              .
-            </p>
-          </div>
-        </Card>
-      )}
-
-      <div className="planning-metrics-grid">
-        <MetricCard
-          icon={<TrendingUp size={20} />}
-          label="Receita mensal"
-          value={formatMoney(totalIncome)}
-          description="Salário mais rendas extras."
-        />
-
-        <MetricCard
-          icon={<TrendingDown size={20} />}
-          label="Despesas fixas"
-          value={formatMoney(fixedExpenses)}
-          description={`${fixedExpensesPercentage.toFixed(1)}% da sua renda mensal.`}
-        />
-
-        <MetricCard
-          icon={<Wallet size={20} />}
-          label="Sobra mensal"
-          value={formatMoney(monthlySurplus)}
-          description={
-            monthlySurplus >= 0
-              ? 'Valor disponível após despesas fixas.'
-              : 'Suas despesas fixas superam sua renda.'
-          }
-        />
-
-        <MetricCard
-          icon={<Target size={20} />}
-          label="Para metas"
-          value={formatMoney(goalsBudget)}
-          description={`${planningSettingsForm.goals_percentage}% da sobra mensal positiva.`}
-        />
-
-        <MetricCard
-          icon={<ShieldCheck size={20} />}
-          label="Para reserva"
-          value={formatMoney(reserveBudget)}
-          description={`${planningSettingsForm.reserve_percentage}% da sobra mensal positiva.`}
-        />
-
-        <MetricCard
-          icon={<Banknote size={20} />}
-          label="Uso livre"
-          value={formatMoney(freeBudget)}
-          description={`${planningSettingsForm.free_percentage}% da sobra mensal positiva.`}
-        />
-
-        <MetricCard
-          icon={<PiggyBank size={20} />}
-          label="Capacidade de economia"
-          value={`${savingCapacity.toFixed(1)}%`}
-          description="Percentual da renda que sobra."
-        />
-
-        <MetricCard
-          icon={<ShieldCheck size={20} />}
-          label="Reserva atual"
-          value={formatMoney(
-            formData.current_savings,
-          )}
-          description="Valor disponível hoje."
-        />
-
-        <MetricCard
-          icon={<Wallet size={20} />}
-          label="Sobrevivência financeira"
-          value={`${survivalMonths.toFixed(
-            1,
-          )} meses`}
-          description="Cobertura considerando despesas fixas."
-        />
-      </div>
-
-      <Card
-        title="Diagnóstico financeiro"
-        subtitle="Análise automática baseada no seu perfil financeiro atual."
-      >
-        <div
-          className={`planning-diagnosis-card ${diagnosisStatus}`}
-        >
-          <div className="planning-diagnosis-header">
-            <div>
-              <span className="goal-eyebrow">
-                Status geral
-              </span>
-
-              <div className="goal-values">
-                <strong>
-                  {diagnosisTitle}
-                </strong>
-
-                <span>
-                  {diagnosisDescription}
-                </span>
-              </div>
-            </div>
-
-            <div className="planning-metric-icon">
-              {diagnosisStatus ===
-                'healthy' && (
-                <CheckCircle2 size={20} />
-              )}
-
-              {diagnosisStatus ===
-                'attention' && (
-                <AlertTriangle size={20} />
-              )}
-
-              {diagnosisStatus ===
-                'critical' && (
-                <XCircle size={20} />
-              )}
-            </div>
-          </div>
-
-          {diagnosisIssues.length > 0 ? (
-            <div className="planning-alert-list">
-              {diagnosisIssues.map((issue) => (
-                <p
-                  key={issue}
-                  className="planning-alert-item"
+              <div className="planning-actions">
+                <LoadingButton
+                  className="primary-btn"
+                  isLoading={savingSettings}
                 >
-                  • {issue}
-                </p>
-              ))}
-            </div>
-          ) : (
-            <p className="planning-alert-item">
-              Nenhum alerta financeiro relevante identificado neste momento.
-            </p>
-          )}
+                  <SlidersHorizontal size={18} />
+                  {savingSettings
+                    ? 'Salvando...'
+                    : 'Salvar motor'}
+                </LoadingButton>
+              </div>
+            </form>
+          </section>
         </div>
-      </Card>
+      </CollapsibleSection>
 
-      <Card
-        title="Projeção das metas"
-        subtitle="Estimativa sequencial baseada em objetivo principal e prioridade."
+      <CollapsibleSection
+        title="Análise avançada"
+        subtitle="Detalhamento de indicadores e projeção individual das metas."
       >
-        {isLoadingGoals ? (
-          <p className="dashboard-subtitle">
-            Carregando metas...
-          </p>
-        ) : activeGoals.length === 0 ? (
-          <EmptyState
-            icon="🎯"
-            title="Nenhuma meta pendente"
-            description="Crie uma meta financeira ou aguarde uma meta existente ter valor pendente para projetar o prazo."
-          />
-        ) : goalsBudget <= 0 ? (
-          <EmptyState
-            icon="⚠️"
-            title="Valor para metas insuficiente"
-            description="Com os dados atuais, não existe valor positivo destinado para metas."
-          />
-        ) : (
-          <div className="planning-form">
-            <div className="planning-diagnosis-card">
-              <div className="planning-diagnosis-header">
-                <div>
-                  <span className="goal-eyebrow">
-                    Resumo geral
-                  </span>
+        <div className="planning-form">
+          <div className="planning-metrics-grid">
+            <CompactMetricCard
+              label="Receita mensal"
+              value={formatMoney(totalIncome)}
+              description="Salário mais rendas extras."
+            />
 
-                  <div className="goal-values">
-                    <strong>
-                      {formatMoney(
-                        totalMissingForGoals,
-                      )}
-                    </strong>
+            <CompactMetricCard
+              label="Despesas fixas"
+              value={formatMoney(fixedExpenses)}
+              description={`${fixedExpensesPercentage.toFixed(1)}% da renda mensal.`}
+            />
 
-                    <span>
-                      pendente em metas
-                    </span>
-                  </div>
-                </div>
+            <CompactMetricCard
+              label="Sobra mensal"
+              value={formatMoney(monthlySurplus)}
+              description="Valor após despesas fixas."
+            />
 
-                <div className="planning-metric-icon">
-                  <CalendarDays size={20} />
-                </div>
-              </div>
+            <CompactMetricCard
+              label="Para metas"
+              value={formatMoney(goalsBudget)}
+              description={`${planningSettingsForm.goals_percentage}% da sobra mensal.`}
+            />
 
-              <p className="planning-alert-item">
-                Com{' '}
-                {formatMoney(goalsBudget)} por mês destinado a metas, seguindo a ordem de objetivo principal e prioridade, você concluiria todas as metas pendentes em aproximadamente{' '}
-                <strong>
-                  {monthsToCompleteAllGoals}{' '}
-                  meses
-                </strong>
-                .
+            <CompactMetricCard
+              label="Para reserva"
+              value={formatMoney(reserveBudget)}
+              description={`${planningSettingsForm.reserve_percentage}% da sobra mensal.`}
+            />
+
+            <CompactMetricCard
+              label="Uso livre"
+              value={formatMoney(freeBudget)}
+              description={`${planningSettingsForm.free_percentage}% da sobra mensal.`}
+            />
+
+            <CompactMetricCard
+              label="Sobrevivência financeira"
+              value={`${survivalMonths.toFixed(
+                1,
+              )} meses`}
+              description="Cobertura por despesas fixas."
+            />
+          </div>
+
+          <Card
+            title="Projeção das metas"
+            subtitle="Estimativa sequencial baseada em objetivo principal e prioridade."
+          >
+            {isLoadingGoals ? (
+              <p className="dashboard-subtitle">
+                Carregando metas...
               </p>
-            </div>
-
-            <div className="planning-metrics-grid">
-              {projectedGoals.map((goal) => (
-                <div
-                  key={goal.id}
-                  className="planning-metric-card"
-                >
-                  <div className="planning-metric-top">
+            ) : activeGoals.length === 0 ? (
+              <EmptyState
+                icon="🎯"
+                title="Nenhuma meta pendente"
+                description="Crie uma meta financeira ou aguarde uma meta existente ter valor pendente para projetar o prazo."
+              />
+            ) : goalsBudget <= 0 ? (
+              <EmptyState
+                icon="⚠️"
+                title="Valor para metas insuficiente"
+                description="Com os dados atuais, não existe valor positivo destinado para metas."
+              />
+            ) : (
+              <div className="planning-form">
+                <div className="planning-diagnosis-card">
+                  <div className="planning-diagnosis-header">
                     <div>
-                      <span className="planning-metric-label">
-                        {goal.isPrimary
-                          ? 'Objetivo principal'
-                          : `Prioridade ${priorityLabels[goal.priority]}`}
+                      <span className="goal-eyebrow">
+                        Resumo geral
                       </span>
 
-                      <strong className="planning-metric-value">
-                        {goal.title}
-                      </strong>
+                      <div className="goal-values">
+                        <strong>
+                          {formatMoney(
+                            totalMissingForGoals,
+                          )}
+                        </strong>
+
+                        <span>
+                          pendente em metas
+                        </span>
+                      </div>
                     </div>
 
                     <div className="planning-metric-icon">
-                      {goal.isPrimary ? (
-                        <Star size={20} />
-                      ) : (
-                        <Target size={20} />
-                      )}
+                      <CalendarDays size={20} />
                     </div>
                   </div>
 
-                  <p className="planning-metric-description">
-                    Faltam{' '}
+                  <p className="planning-alert-item">
+                    Com{' '}
+                    {formatMoney(goalsBudget)} por mês destinado a metas, seguindo a ordem de objetivo principal e prioridade, você concluiria todas as metas pendentes em aproximadamente{' '}
                     <strong>
-                      {formatMoney(
-                        goal.remainingAmount,
-                      )}
-                    </strong>
-                    . Considerando as metas anteriores da fila, prazo estimado:{' '}
-                    <strong>
-                      {goal.monthsToComplete}{' '}
+                      {monthsToCompleteAllGoals}{' '}
                       meses
-                    </strong>
-                    . Previsão:{' '}
-                    <strong>
-                      {goal.projectedDate}
                     </strong>
                     .
                   </p>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </Card>
+
+                <div className="planning-metrics-grid">
+                  {projectedGoals.map((goal) => (
+                    <div
+                      key={goal.id}
+                      className="planning-metric-card"
+                    >
+                      <div className="planning-metric-top">
+                        <div>
+                          <span className="planning-metric-label">
+                            {goal.isPrimary
+                              ? 'Objetivo principal'
+                              : `Prioridade ${priorityLabels[goal.priority]}`}
+                          </span>
+
+                          <strong className="planning-metric-value">
+                            {goal.title}
+                          </strong>
+                        </div>
+
+                        <div className="planning-metric-icon">
+                          {goal.isPrimary ? (
+                            <Star size={20} />
+                          ) : (
+                            <Target size={20} />
+                          )}
+                        </div>
+                      </div>
+
+                      <p className="planning-metric-description">
+                        Faltam{' '}
+                        <strong>
+                          {formatMoney(
+                            goal.remainingAmount,
+                          )}
+                        </strong>
+                        . Considerando as metas anteriores da fila, prazo estimado:{' '}
+                        <strong>
+                          {goal.monthsToComplete}{' '}
+                          meses
+                        </strong>
+                        . Previsão:{' '}
+                        <strong>
+                          {goal.projectedDate}
+                        </strong>
+                        .
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Card>
+        </div>
+      </CollapsibleSection>
     </div>
   );
 }
@@ -1296,19 +1279,17 @@ function PercentInput({
   );
 }
 
-type MetricCardProps = {
-  icon: ReactNode;
+type CompactMetricCardProps = {
   label: string;
   value: string;
   description: string;
 };
 
-function MetricCard({
-  icon,
+function CompactMetricCard({
   label,
   value,
   description,
-}: MetricCardProps) {
+}: CompactMetricCardProps) {
   return (
     <div className="planning-metric-card">
       <div className="planning-metric-top">
@@ -1320,10 +1301,6 @@ function MetricCard({
           <strong className="planning-metric-value">
             {value}
           </strong>
-        </div>
-
-        <div className="planning-metric-icon">
-          {icon}
         </div>
       </div>
 

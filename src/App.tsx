@@ -16,6 +16,7 @@ import Categories from './pages/Categories';
 import Goals from './pages/Goals';
 import Reports from './pages/Reports';
 import { Planning } from './pages/Planning';
+import Imports from './pages/Imports';
 
 export default function App() {
   return (
@@ -41,6 +42,8 @@ export default function App() {
           <Route path="/reports" element={<Reports />} />
 
           <Route path="/planning" element={<Planning />} />
+
+          <Route path="/imports" element={<Imports />} />
 
           <Route
             path="*"
