@@ -23,15 +23,22 @@ import {
   SlidersHorizontal,
   Banknote,
   Star,
+  Gauge,
+  Calculator,
 } from 'lucide-react';
 
 import Card from '../components/Card';
 import EmptyState from '../components/EmptyState';
 import LoadingButton from '../components/LoadingButton';
 
+import ScenarioList from '../components/planning/ScenarioList';
+import SimulationResultCard from '../components/planning/SimulationResultCard';
+
 import { useFinancialProfile } from '../hook/useFinancialProfile';
 import { useGoals } from '../hook/useGoals';
 import { usePlanningSettings } from '../hook/usePlanningSettings';
+import { usePlanningMetrics } from '../hook/usePlanningMetrics';
+import { useFinancialScenarios } from '../hook/useFinancialScenarios';
 
 import type { FinancialProfileFormData } from '../types/financialProfile';
 import type { PlanningSettingsFormData } from '../types/planningSettings';
@@ -39,16 +46,16 @@ import type { GoalPriority } from '../types/goal';
 
 import { formatMoney } from '../utils/format';
 
+import {
+  simulatePurchaseImpact,
+  type FinancialSimulationResult,
+} from '../utils/financialSimulator';
+
 type FinancialProfileField =
   keyof FinancialProfileFormData;
 
 type PlanningSettingsField =
   keyof PlanningSettingsFormData;
-
-type DiagnosisStatus =
-  | 'healthy'
-  | 'attention'
-  | 'critical';
 
 const initialFormData: FinancialProfileFormData = {
   salary: 0,
@@ -65,12 +72,6 @@ const initialPlanningSettings: PlanningSettingsFormData = {
   goals_percentage: 70,
   reserve_percentage: 20,
   free_percentage: 10,
-};
-
-const priorityOrder: Record<GoalPriority, number> = {
-  high: 1,
-  medium: 2,
-  low: 3,
 };
 
 const priorityLabels: Record<GoalPriority, string> = {
@@ -99,14 +100,6 @@ function parseCurrencyInput(value: string) {
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
-function addMonthsToCurrentDate(months: number) {
-  const date = new Date();
-
-  date.setMonth(date.getMonth() + months);
-
-  return date.toLocaleDateString('pt-BR');
-}
-
 export function Planning() {
   const {
     profile,
@@ -124,6 +117,13 @@ export function Planning() {
     goals,
     isLoading: isLoadingGoals,
   } = useGoals();
+
+  const {
+    scenarios,
+    loading: loadingScenarios,
+    createScenario,
+    removeScenario,
+  } = useFinancialScenarios();
 
   const [
     formData,
@@ -153,6 +153,26 @@ export function Planning() {
     initialPlanningSettings,
   );
 
+  const [
+    purchaseAmount,
+    setPurchaseAmount,
+  ] = useState(0);
+
+  const [
+    formattedPurchaseAmount,
+    setFormattedPurchaseAmount,
+  ] = useState('');
+
+  const [
+    scenarioName,
+    setScenarioName,
+  ] = useState('');
+
+  const [
+    simulationResult,
+    setSimulationResult,
+  ] = useState<FinancialSimulationResult | null>(null);
+
   const [saving, setSaving] =
     useState(false);
 
@@ -160,6 +180,44 @@ export function Planning() {
     savingSettings,
     setSavingSettings,
   ] = useState(false);
+
+  const [
+    savingScenario,
+    setSavingScenario,
+  ] = useState(false);
+
+  const [
+    deletingScenarioId,
+    setDeletingScenarioId,
+  ] = useState<string | null>(null);
+
+  const {
+    totalIncome,
+    fixedExpenses,
+    monthlySurplus,
+    savingCapacity,
+    fixedExpensesPercentage,
+    survivalMonths,
+    planningPercentageTotal,
+    goalsBudget,
+    reserveBudget,
+    freeBudget,
+    diagnosisIssues,
+    diagnosisStatus,
+    diagnosisTitle,
+    diagnosisDescription,
+    activeGoals,
+    goalsCompletionPercentage,
+    financialScore,
+    totalMissingForGoals,
+    monthsToCompleteAllGoals,
+    projectedGoals,
+    primaryGoalProjection,
+  } = usePlanningMetrics({
+    formData,
+    planningSettingsForm,
+    goals,
+  });
 
   useEffect(() => {
     if (!profile) return;
@@ -246,6 +304,24 @@ export function Planning() {
     }));
   }
 
+  function handlePurchaseAmountChange(
+    value: string,
+  ) {
+    setFormattedPurchaseAmount(value);
+    setPurchaseAmount(
+      parseCurrencyInput(value),
+    );
+    setSimulationResult(null);
+  }
+
+  function handlePurchaseAmountBlur() {
+    setFormattedPurchaseAmount(
+      formatNumberForInput(
+        purchaseAmount,
+      ),
+    );
+  }
+
   function handlePlanningSettingsChange(
     field: PlanningSettingsField,
     value: string,
@@ -289,12 +365,7 @@ export function Planning() {
   ) {
     event.preventDefault();
 
-    const total =
-      planningSettingsForm.goals_percentage +
-      planningSettingsForm.reserve_percentage +
-      planningSettingsForm.free_percentage;
-
-    if (total !== 100) {
+    if (planningPercentageTotal !== 100) {
       alert(
         'A soma dos percentuais precisa ser igual a 100%.',
       );
@@ -323,178 +394,113 @@ export function Planning() {
     }
   }
 
-  const totalIncome =
-    formData.salary +
-    formData.extra_income;
+  function handleSimulatePurchase() {
+    if (purchaseAmount <= 0) {
+      alert(
+        'Informe um valor de compra válido.',
+      );
 
-  const fixedExpenses =
-    formData.rent +
-    formData.energy +
-    formData.water +
-    formData.internet +
-    formData.financing;
+      return;
+    }
 
-  const monthlySurplus =
-    totalIncome - fixedExpenses;
+    const result =
+      simulatePurchaseImpact({
+        purchaseAmount,
+        currentSavings:
+          formData.current_savings,
+        fixedExpenses,
+        monthlyGoalsBudget:
+          goalsBudget,
+        primaryGoalRemainingAmount:
+          primaryGoalProjection?.remainingAmount ??
+          null,
+      });
 
-  const positiveMonthlySurplus =
-    Math.max(monthlySurplus, 0);
+    setSimulationResult(result);
+  }
 
-  const savingCapacity =
-    totalIncome > 0
-      ? (monthlySurplus / totalIncome) * 100
-      : 0;
+  async function handleSaveScenario() {
+    if (!simulationResult) {
+      alert(
+        'Faça uma simulação antes de salvar o cenário.',
+      );
 
-  const fixedExpensesPercentage =
-    totalIncome > 0
-      ? (fixedExpenses / totalIncome) * 100
-      : 0;
+      return;
+    }
 
-  const survivalMonths =
-    fixedExpenses > 0
-      ? formData.current_savings /
-        fixedExpenses
-      : 0;
+    if (!scenarioName.trim()) {
+      alert(
+        'Informe um nome para o cenário.',
+      );
 
-  const planningPercentageTotal =
-    planningSettingsForm.goals_percentage +
-    planningSettingsForm.reserve_percentage +
-    planningSettingsForm.free_percentage;
+      return;
+    }
 
-  const goalsBudget =
-    positiveMonthlySurplus *
-    (planningSettingsForm.goals_percentage / 100);
+    setSavingScenario(true);
 
-  const reserveBudget =
-    positiveMonthlySurplus *
-    (planningSettingsForm.reserve_percentage / 100);
+    try {
+      await createScenario({
+        name: scenarioName.trim(),
 
-  const freeBudget =
-    positiveMonthlySurplus *
-    (planningSettingsForm.free_percentage / 100);
+        purchase_amount:
+          simulationResult.purchaseAmount,
 
-  const diagnosisIssues = [
-    monthlySurplus < 0
-      ? 'Sua sobra mensal está negativa. Suas despesas fixas estão maiores que sua renda.'
-      : null,
-    fixedExpensesPercentage > 70
-      ? 'Suas despesas fixas estão acima de 70% da renda. Isso reduz sua margem para metas e imprevistos.'
-      : null,
-    survivalMonths > 0 && survivalMonths < 3
-      ? 'Sua reserva cobre menos de 3 meses de despesas fixas.'
-      : null,
-    formData.current_savings === 0
-      ? 'Você ainda não possui reserva financeira cadastrada.'
-      : null,
-  ].filter(Boolean) as string[];
+        risk:
+          simulationResult.risk,
 
-  const diagnosisStatus: DiagnosisStatus =
-    monthlySurplus < 0
-      ? 'critical'
-      : diagnosisIssues.length > 0
-        ? 'attention'
-        : 'healthy';
+        can_afford:
+          simulationResult.canAfford,
 
-  const diagnosisTitle =
-    diagnosisStatus === 'healthy'
-      ? 'Saudável'
-      : diagnosisStatus === 'attention'
-        ? 'Atenção'
-        : 'Crítico';
+        remaining_savings_after_purchase:
+          simulationResult.remainingSavingsAfterPurchase,
 
-  const diagnosisDescription =
-    diagnosisStatus === 'healthy'
-      ? 'Seu perfil financeiro apresenta boa margem para manter metas e construir reserva.'
-      : diagnosisStatus === 'attention'
-        ? 'Seu perfil financeiro tem pontos que merecem acompanhamento antes de assumir novas metas.'
-        : 'Seu perfil financeiro exige ajuste antes de avançar com novas metas ou compromissos.';
+        survival_months_after_purchase:
+          simulationResult.survivalMonthsAfterPurchase,
 
-  const activeGoals = goals
-    .filter(
-      (goal) =>
-        goal.currentAmount <
-        goal.targetAmount,
-    )
-    .sort((a, b) => {
-      if (a.isPrimary && !b.isPrimary) {
-        return -1;
-      }
+        goal_delay_months:
+          simulationResult.goalDelayMonths,
 
-      if (!a.isPrimary && b.isPrimary) {
-        return 1;
-      }
+        summary:
+          simulationResult.summary,
 
-      const priorityDifference =
-        priorityOrder[a.priority] -
-        priorityOrder[b.priority];
+        warnings:
+          simulationResult.warnings,
+      });
 
-      if (priorityDifference !== 0) {
-        return priorityDifference;
-      }
+      setScenarioName('');
+      setFormattedPurchaseAmount('');
+      setPurchaseAmount(0);
+      setSimulationResult(null);
 
-      return a.id - b.id;
-    });
+      alert(
+        'Cenário salvo com sucesso!',
+      );
+    } catch (error) {
+      console.error(error);
 
-  const totalMissingForGoals =
-    activeGoals.reduce(
-      (acc, goal) =>
-        acc +
-        Math.max(
-          goal.targetAmount -
-            goal.currentAmount,
-          0,
-        ),
-      0,
-    );
+      alert(
+        'Erro ao salvar cenário financeiro.',
+      );
+    } finally {
+      setSavingScenario(false);
+    }
+  }
 
-  const monthsToCompleteAllGoals =
-    goalsBudget > 0 &&
-    totalMissingForGoals > 0
-      ? Math.ceil(
-          totalMissingForGoals /
-            goalsBudget,
-        )
-      : 0;
+  async function handleDeleteScenario(id: string) {
+    setDeletingScenarioId(id);
 
-  let accumulatedMissingAmount = 0;
+    try {
+      await removeScenario(id);
+    } catch (error) {
+      console.error(error);
 
-  const projectedGoals =
-    activeGoals.map((goal) => {
-      const remainingAmount =
-        Math.max(
-          goal.targetAmount -
-            goal.currentAmount,
-          0,
-        );
-
-      accumulatedMissingAmount +=
-        remainingAmount;
-
-      const monthsToComplete =
-        goalsBudget > 0
-          ? Math.ceil(
-              accumulatedMissingAmount /
-                goalsBudget,
-            )
-          : null;
-
-      return {
-        ...goal,
-        remainingAmount,
-        monthsToComplete,
-        projectedDate:
-          monthsToComplete !== null
-            ? addMonthsToCurrentDate(
-                monthsToComplete,
-              )
-            : null,
-      };
-    });
-
-  const primaryGoalProjection =
-    projectedGoals.find(
-      (goal) => goal.isPrimary,
-    );
+      alert(
+        'Erro ao excluir cenário financeiro.',
+      );
+    } finally {
+      setDeletingScenarioId(null);
+    }
+  }
 
   if (loading || loadingSettings) {
     return (
@@ -702,6 +708,136 @@ export function Planning() {
             </LoadingButton>
           </div>
         </form>
+      </Card>
+
+      <Card
+        title="Score financeiro"
+        subtitle="Pontuação automática baseada em renda, despesas, reserva e metas."
+      >
+        <div
+          className={`planning-diagnosis-card ${
+            financialScore.level === 'critical'
+              ? 'critical'
+              : financialScore.level === 'attention'
+                ? 'attention'
+                : 'healthy'
+          }`}
+        >
+          <div className="planning-diagnosis-header">
+            <div>
+              <span className="goal-eyebrow">
+                Score atual
+              </span>
+
+              <div className="goal-values">
+                <strong>
+                  {financialScore.score}/100 · {financialScore.title}
+                </strong>
+
+                <span>
+                  Progresso das metas: {goalsCompletionPercentage.toFixed(1)}%
+                </span>
+              </div>
+            </div>
+
+            <div className="planning-metric-icon">
+              <Gauge size={20} />
+            </div>
+          </div>
+
+          {financialScore.recommendations.length > 0 ? (
+            <div className="planning-alert-list">
+              {financialScore.recommendations.map((recommendation) => (
+                <p
+                  key={recommendation}
+                  className="planning-alert-item"
+                >
+                  • {recommendation}
+                </p>
+              ))}
+            </div>
+          ) : (
+            <p className="planning-alert-item">
+              Sua estrutura financeira está em boa condição dentro dos critérios atuais.
+            </p>
+          )}
+        </div>
+      </Card>
+
+      <Card
+        title="Simulador financeiro"
+        subtitle="Simule uma compra e salve cenários para comparar decisões futuras."
+      >
+        <div className="planning-form">
+          <div className="planning-input-grid two">
+            <MoneyInput
+              label="Valor da compra"
+              value={formattedPurchaseAmount}
+              onChange={handlePurchaseAmountChange}
+              onBlur={handlePurchaseAmountBlur}
+            />
+
+            <label className="planning-input-field">
+              <span className="planning-input-label">
+                Nome do cenário
+              </span>
+
+              <input
+                className="search-input"
+                placeholder="Ex: Troca de celular"
+                value={scenarioName}
+                onChange={(event) =>
+                  setScenarioName(
+                    event.target.value,
+                  )
+                }
+              />
+            </label>
+          </div>
+
+          <div className="planning-actions">
+            <button
+              type="button"
+              className="primary-btn"
+              onClick={handleSimulatePurchase}
+            >
+              <Calculator size={18} />
+              Simular impacto
+            </button>
+          </div>
+
+          {simulationResult && (
+            <>
+              <SimulationResultCard
+                result={simulationResult}
+              />
+
+              <div className="planning-actions">
+                <LoadingButton
+                  className="secondary-btn"
+                  isLoading={savingScenario}
+                  onClick={handleSaveScenario}
+                >
+                  {savingScenario
+                    ? 'Salvando cenário...'
+                    : 'Salvar cenário'}
+                </LoadingButton>
+              </div>
+            </>
+          )}
+        </div>
+      </Card>
+
+      <Card
+        title="Cenários salvos"
+        subtitle="Compare simulações anteriores e avalie decisões financeiras."
+      >
+        <ScenarioList
+          scenarios={scenarios}
+          loading={loadingScenarios}
+          deletingId={deletingScenarioId}
+          onDelete={handleDeleteScenario}
+        />
       </Card>
 
       <Card
