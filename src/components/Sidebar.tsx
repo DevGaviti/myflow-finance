@@ -4,6 +4,7 @@ import {
   Tags,
   Target,
   BarChart3,
+  Wallet,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -39,6 +40,11 @@ const menuItems = [
     label: 'Metas',
     icon: Target,
     path: '/goals',
+  },
+  {
+    label: 'Planejamento',
+    icon: Wallet,
+    path: '/planning',
   },
   {
     label: 'Relatórios',

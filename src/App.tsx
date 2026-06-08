@@ -15,15 +15,13 @@ import Transactions from './pages/Transactions';
 import Categories from './pages/Categories';
 import Goals from './pages/Goals';
 import Reports from './pages/Reports';
+import { Planning } from './pages/Planning';
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route
-          path="/login"
-          element={<Login />}
-        />
+        <Route path="/login" element={<Login />} />
 
         <Route
           element={
@@ -32,36 +30,21 @@ export default function App() {
             </ProtectedRoute>
           }
         >
-          <Route
-            path="/dashboard"
-            element={<Dashboard />}
-          />
+          <Route path="/dashboard" element={<Dashboard />} />
 
-          <Route
-            path="/transactions"
-            element={<Transactions />}
-          />
+          <Route path="/transactions" element={<Transactions />} />
 
-          <Route
-            path="/categories"
-            element={<Categories />}
-          />
+          <Route path="/categories" element={<Categories />} />
 
-          <Route
-            path="/goals"
-            element={<Goals />}
-          />
+          <Route path="/goals" element={<Goals />} />
 
-          <Route
-            path="/reports"
-            element={<Reports />}
-          />
+          <Route path="/reports" element={<Reports />} />
+
+          <Route path="/planning" element={<Planning />} />
 
           <Route
             path="*"
-            element={
-              <Navigate to="/dashboard" />
-            }
+            element={<Navigate to="/dashboard" />}
           />
         </Route>
       </Routes>

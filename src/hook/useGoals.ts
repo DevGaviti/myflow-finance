@@ -16,6 +16,7 @@ import {
 
 import type {
   Goal,
+  GoalPriority,
 } from '../types/goal';
 
 import type {
@@ -29,6 +30,8 @@ type SupabaseGoal = {
   current_amount: number;
   deadline: string | null;
   user_id: string;
+  priority: GoalPriority;
+  is_primary: boolean;
 };
 
 type SupabaseGoalContribution = {
@@ -55,6 +58,10 @@ function mapGoalFromSupabase(
       Number(goal.current_amount),
 
     deadline: goal.deadline,
+
+    priority: goal.priority,
+
+    isPrimary: goal.is_primary,
   };
 }
 
@@ -220,35 +227,50 @@ export function useGoals() {
   ) {
     if (!user) return;
 
-    const { data, error } =
-      await supabase
-        .from('goals')
-        .insert({
-          title: goal.title,
+    if (goal.isPrimary) {
+      const { error: resetError } =
+        await supabase
+          .from('goals')
+          .update({
+            is_primary: false,
+          })
+          .eq('user_id', user.id);
 
-          target_amount:
-            goal.targetAmount,
+      if (resetError) {
+        notifyError(resetError.message);
+        return;
+      }
+    }
 
-          current_amount:
-            goal.currentAmount,
+    const { error } = await supabase
+      .from('goals')
+      .insert({
+        title: goal.title,
 
-          deadline:
-            goal.deadline,
+        target_amount:
+          goal.targetAmount,
 
-          user_id: user.id,
-        })
-        .select()
-        .single();
+        current_amount:
+          goal.currentAmount,
+
+        deadline:
+          goal.deadline,
+
+        priority:
+          goal.priority,
+
+        is_primary:
+          goal.isPrimary,
+
+        user_id: user.id,
+      });
 
     if (error) {
       notifyError(error.message);
       return;
     }
 
-    setGoals((prev) => [
-      mapGoalFromSupabase(data),
-      ...prev,
-    ]);
+    await fetchGoals();
 
     notifySuccess(
       'Meta criada com sucesso!',
@@ -260,13 +282,33 @@ export function useGoals() {
     title,
     targetAmount,
     deadline,
+    priority,
+    isPrimary,
   }: {
     id: number;
     title: string;
     targetAmount: number;
     deadline?: string | null;
+    priority: GoalPriority;
+    isPrimary: boolean;
   }) {
     if (!user) return;
+
+    if (isPrimary) {
+      const { error: resetError } =
+        await supabase
+          .from('goals')
+          .update({
+            is_primary: false,
+          })
+          .eq('user_id', user.id)
+          .neq('id', id);
+
+      if (resetError) {
+        notifyError(resetError.message);
+        return;
+      }
+    }
 
     const { data, error } =
       await supabase
@@ -279,6 +321,11 @@ export function useGoals() {
 
           deadline:
             deadline || null,
+
+          priority,
+
+          is_primary:
+            isPrimary,
         })
         .eq('id', id)
         .eq('user_id', user.id)
@@ -297,6 +344,8 @@ export function useGoals() {
           : goal,
       ),
     );
+
+    await fetchGoals();
 
     notifySuccess(
       'Meta atualizada com sucesso!',
@@ -482,11 +531,14 @@ export function useGoals() {
   async function removeGoal(
     id: number,
   ) {
+    if (!user) return;
+
     const { error } =
       await supabase
         .from('goals')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user.id);
 
     if (error) {
       notifyError(error.message);
