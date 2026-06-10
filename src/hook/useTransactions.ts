@@ -19,8 +19,8 @@ import type {
 } from '../types/transaction';
 
 import type {
-  ParsedCsvTransaction,
-} from '../utils/csvTransactionParser';
+  NormalizedImportedTransaction,
+} from '../utils/imports/transactionNormalizer';
 
 type SupabaseTransaction = {
   id: number;
@@ -59,10 +59,15 @@ function mapFromSupabase(
 ): Transaction {
   return {
     id: transaction.id,
+
     title: transaction.title,
+
     value: Number(transaction.amount),
+
     type: transaction.type,
+
     category: transaction.category,
+
     date: new Date(
       `${transaction.date}T12:00:00`,
     ).toISOString(),
@@ -75,13 +80,21 @@ function mapToSupabase(
 ) {
   return {
     title: transaction.title,
+
     amount: transaction.value,
+
     type: transaction.type,
+
     category: transaction.category,
+
     date: transaction.date.split('T')[0],
+
     user_id: userId,
+
     source: 'manual',
+
     external_id: null,
+
     import_batch_id: null,
   };
 }
@@ -90,10 +103,12 @@ function mapImportedTransactionToSupabase({
   transaction,
   userId,
   importBatchId,
+  source,
 }: {
-  transaction: ParsedCsvTransaction;
+  transaction: NormalizedImportedTransaction;
   userId: string;
   importBatchId: string;
+  source: 'csv' | 'pdf' | 'ofx';
 }) {
   return {
     title: transaction.description,
@@ -102,16 +117,13 @@ function mapImportedTransactionToSupabase({
 
     type: transaction.type,
 
-    category:
-      transaction.type === 'income'
-        ? 'Receitas'
-        : 'Sem categoria',
+    category: transaction.category,
 
     date: transaction.date,
 
     user_id: userId,
 
-    source: 'csv',
+    source,
 
     external_id:
       transaction.externalId,
@@ -119,6 +131,19 @@ function mapImportedTransactionToSupabase({
     import_batch_id:
       importBatchId,
   };
+}
+
+function getUniqueImportedTransactions(
+  transactions: NormalizedImportedTransaction[],
+) {
+  return Array.from(
+    new Map(
+      transactions.map((transaction) => [
+        transaction.externalId,
+        transaction,
+      ]),
+    ).values(),
+  );
 }
 
 export function useTransactions() {
@@ -239,9 +264,11 @@ export function useTransactions() {
   async function importTransactions({
     parsedTransactions,
     importBatchId,
+    source,
   }: {
-    parsedTransactions: ParsedCsvTransaction[];
+    parsedTransactions: NormalizedImportedTransaction[];
     importBatchId: string;
+    source: 'csv' | 'pdf' | 'ofx';
   }): Promise<ImportTransactionsResult | null> {
     if (!user) {
       handleError(
@@ -258,8 +285,17 @@ export function useTransactions() {
       };
     }
 
+    const uniqueParsedTransactions =
+      getUniqueImportedTransactions(
+        parsedTransactions,
+      );
+
+    const internalDuplicatedCount =
+      parsedTransactions.length -
+      uniqueParsedTransactions.length;
+
     const externalIds =
-      parsedTransactions.map(
+      uniqueParsedTransactions.map(
         (transaction) =>
           transaction.externalId,
       );
@@ -271,7 +307,7 @@ export function useTransactions() {
       .from('transactions')
       .select('external_id')
       .eq('user_id', user.id)
-      .eq('source', 'csv')
+      .eq('source', source)
       .in('external_id', externalIds);
 
     if (existingError) {
@@ -290,7 +326,7 @@ export function useTransactions() {
       );
 
     const transactionsToImport =
-      parsedTransactions.filter(
+      uniqueParsedTransactions.filter(
         (transaction) =>
           !existingExternalIds.has(
             transaction.externalId,
@@ -318,8 +354,12 @@ export function useTransactions() {
         (transaction) =>
           mapImportedTransactionToSupabase({
             transaction,
+
             userId: user.id,
+
             importBatchId,
+
+            source,
           }),
       );
 
@@ -341,6 +381,11 @@ export function useTransactions() {
       ...prev,
     ]);
 
+    const duplicated =
+      internalDuplicatedCount +
+      uniqueParsedTransactions.length -
+      transactionsToImport.length;
+
     const result = {
       total:
         parsedTransactions.length,
@@ -348,9 +393,7 @@ export function useTransactions() {
       imported:
         transactionsToImport.length,
 
-      duplicated:
-        parsedTransactions.length -
-        transactionsToImport.length,
+      duplicated,
     };
 
     notifySuccess(

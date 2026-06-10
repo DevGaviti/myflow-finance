@@ -4385,3 +4385,69 @@ body.dark .planning-metric-card {
     justify-content: stretch;
   }
 }
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(15, 23, 42, 0.56);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+}
+
+.modal-card {
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 28px;
+  box-shadow: 0 40px 120px rgba(15, 23, 42, 0.32);
+  color: #0f172a;
+}
+
+.modal-title {
+  font-size: 28px;
+  font-weight: 900;
+  color: #0f172a;
+  letter-spacing: -0.04em;
+}
+
+@media (max-width: 768px) {
+  .modal-backdrop {
+    padding: 12px;
+    align-items: stretch;
+  }
+
+  .modal-card {
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 22px;
+  }
+}
+
+.modal-card {
+  max-width: 1120px;
+}
+
+.modal-card * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.35) transparent;
+}
+
+.modal-card *::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-card *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-card *::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.28);
+  border-radius: 999px;
+}
+
+.modal-card *::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.42);
+}
