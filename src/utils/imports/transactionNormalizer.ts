@@ -3,6 +3,10 @@ import {
   type CategorySuggestion,
 } from './categoryMatcher';
 
+import {
+  normalizeMerchantTitle,
+} from './merchantNormalizer';
+
 export type NormalizedImportedTransaction = {
   date: string;
 
@@ -98,21 +102,26 @@ export function normalizeImportedTransaction({
   const amount =
     Math.abs(signedAmount);
 
-  const trimmedDescription =
+  const rawDescription =
     description.trim();
+
+  const cleanedDescription =
+    normalizeMerchantTitle(
+      rawDescription,
+    );
 
   const suggestion =
     categorySuggestion ??
     suggestCategoryByTransactionType(
       type,
-      trimmedDescription,
+      rawDescription,
     );
 
   return {
     date: normalizedDate,
 
     description:
-      trimmedDescription,
+      cleanedDescription,
 
     amount,
 
@@ -130,7 +139,7 @@ export function normalizeImportedTransaction({
     externalId:
       createImportedExternalId({
         date: normalizedDate,
-        description: trimmedDescription,
+        description: rawDescription,
         amount: signedAmount,
       }),
   };

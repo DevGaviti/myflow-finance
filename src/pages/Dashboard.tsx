@@ -2,15 +2,25 @@ import {
   useState,
 } from 'react';
 
+import {
+  useNavigate,
+} from 'react-router-dom';
+
+import {
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  ShieldCheck,
+  Target,
+  Lightbulb,
+} from 'lucide-react';
+
 import TransactionModal from '../components/TransactionModal';
-import TransactionsList from '../components/TransactionsList';
 import KPICard from '../components/KPICard';
 import Card from '../components/Card';
 import Topbar from '../components/Topbar';
-import FinanceChart from '../components/FinanceChart';
 import CategoryChart from '../components/CategoryChart';
 import PageLoader from '../components/PageLoader';
-import ConfirmModal from '../components/ConfirmModal';
 import EmptyState from '../components/EmptyState';
 
 import { useTransactions } from '../hook/useTransactions';
@@ -42,12 +52,13 @@ type PeriodFilter =
   | 'month';
 
 export default function Dashboard() {
+  const navigate =
+    useNavigate();
+
   const {
     transactions,
     isLoading,
     addTransaction: addTransactionHook,
-    removeTransaction: removeTransactionHook,
-    updateTransaction,
   } = useTransactions();
 
   const {
@@ -84,14 +95,6 @@ export default function Dashboard() {
         .split('T')[0],
     );
 
-  const [search, setSearch] =
-    useState('');
-
-  const [filterType, setFilterType] =
-    useState<
-      'all' | TransactionType
-    >('all');
-
   const [periodFilter, setPeriodFilter] =
     useState<PeriodFilter>('all');
 
@@ -101,23 +104,8 @@ export default function Dashboard() {
   const [endDate, setEndDate] =
     useState('');
 
-  const [deleteId, setDeleteId] =
-    useState<number | null>(
-      null,
-    );
-
-  const [editId, setEditId] =
-    useState<number | null>(
-      null,
-    );
-
   const [isSaving, setIsSaving] =
     useState(false);
-
-  const [
-    isDeleting,
-    setIsDeleting,
-  ] = useState(false);
 
   const hasCustomDateFilter =
     Boolean(startDate) ||
@@ -274,35 +262,6 @@ export default function Dashboard() {
       },
     );
 
-  const filteredTransactions =
-    filteredByPeriod.filter(
-      (item) => {
-        const matchesSearch =
-          item.title
-            .toLowerCase()
-            .includes(
-              search.toLowerCase(),
-            ) ||
-          item.category
-            .toLowerCase()
-            .includes(
-              search.toLowerCase(),
-            );
-
-        const matchesType =
-          filterType ===
-          'all'
-            ? true
-            : item.type ===
-              filterType;
-
-        return (
-          matchesSearch &&
-          matchesType
-        );
-      },
-    );
-
   function resetForm() {
     setTitle('');
     setValue('');
@@ -349,193 +308,6 @@ export default function Dashboard() {
       setIsSaving(false);
     }
   }
-
-  async function removeTransaction(
-    id: number,
-  ) {
-    setIsDeleting(true);
-
-    try {
-      await removeTransactionHook(id);
-
-      setDeleteId(null);
-    } finally {
-      setIsDeleting(false);
-    }
-  }
-
-  function editTransaction(
-    id: number,
-  ) {
-    const transaction =
-      transactions.find(
-        (item) =>
-          item.id === id,
-      );
-
-    if (!transaction)
-      return;
-
-    setTitle(
-      transaction.title,
-    );
-
-    setValue(
-      String(
-        transaction.value,
-      ),
-    );
-
-    setFormattedValue(
-      formatMoney(
-        transaction.value,
-      ),
-    );
-
-    setType(
-      transaction.type,
-    );
-
-    setCategory(
-      transaction.category,
-    );
-
-    setDate(
-      transaction.date.split(
-        'T',
-      )[0],
-    );
-
-    setEditId(id);
-
-    setShowModal(true);
-  }
-
-  async function saveEditedTransaction() {
-    if (!title || !value || !editId)
-      return;
-
-    setIsSaving(true);
-
-    try {
-      await updateTransaction({
-        id: editId,
-        title,
-        value: Number(value),
-        type,
-        category,
-        date:
-          new Date(
-            `${date}T12:00:00`,
-          ).toISOString(),
-      });
-
-      setEditId(null);
-
-      resetForm();
-
-      setShowModal(false);
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  const monthlyMap = new Map<
-    string,
-    {
-      income: number;
-      expense: number;
-    }
-  >();
-
-  filteredByPeriod.forEach(
-    (transaction) => {
-      const date =
-        new Date(
-          transaction.date,
-        );
-
-      const monthKey =
-        `${date.getFullYear()}-${String(
-          date.getMonth() + 1,
-        ).padStart(2, '0')}`;
-
-      const current =
-        monthlyMap.get(
-          monthKey,
-        ) || {
-          income: 0,
-          expense: 0,
-        };
-
-      if (
-        transaction.type ===
-        'income'
-      ) {
-        current.income +=
-          transaction.value;
-      } else {
-        current.expense +=
-          transaction.value;
-      }
-
-      monthlyMap.set(
-        monthKey,
-        current,
-      );
-    },
-  );
-
-  const monthlyData =
-    Array.from(
-      monthlyMap.entries(),
-    )
-      .sort(
-        ([a], [b]) =>
-          a.localeCompare(b),
-      )
-      .map(
-        ([
-          monthKey,
-          values,
-        ]) => {
-          const [
-            year,
-            month,
-          ] = monthKey
-            .split('-')
-            .map(Number);
-
-          const date =
-            new Date(
-              year,
-              month - 1,
-            );
-
-          return {
-            month:
-              date
-                .toLocaleDateString(
-                  'pt-BR',
-                  {
-                    month: 'short',
-                  },
-                )
-                .replace('.', '')
-                .replace(
-                  /^./,
-                  (char) =>
-                    char.toUpperCase(),
-                ),
-
-            income:
-              values.income,
-
-            expense:
-              values.expense,
-          };
-        },
-      );
 
   const categoryMap = new Map<
     string,
@@ -662,14 +434,132 @@ export default function Dashboard() {
         )
       : 0;
 
+  const savingsRate =
+    filteredIncome > 0
+      ? (filteredBalance /
+          filteredIncome) *
+        100
+      : 0;
+
+  const expenseRate =
+    filteredIncome > 0
+      ? (filteredExpense /
+          filteredIncome) *
+        100
+      : 0;
+
+  const financialScore =
+    Math.max(
+      0,
+      Math.min(
+        100,
+        Math.round(
+          (savingsRate >= 20
+            ? 40
+            : savingsRate >= 10
+              ? 32
+              : savingsRate >= 0
+                ? 22
+                : 8) +
+            (expenseRate <= 70
+              ? 30
+              : expenseRate <= 85
+                ? 22
+                : expenseRate <= 100
+                  ? 12
+                  : 4) +
+            (goals.length > 0
+              ? 12
+              : 0) +
+            (goalsProgress >= 50
+              ? 12
+              : goalsProgress > 0
+                ? 8
+                : 0) +
+            (filteredByPeriod.length > 0
+              ? 6
+              : 0),
+        ),
+      ),
+    );
+
+  const healthStatus =
+    financialScore >= 80
+      ? 'healthy'
+      : financialScore >= 55
+        ? 'attention'
+        : 'critical';
+
+  const healthTitle =
+    healthStatus === 'healthy'
+      ? 'Saúde financeira boa'
+      : healthStatus === 'attention'
+        ? 'Atenção ao orçamento'
+        : 'Risco financeiro';
+
+  const healthDescription =
+    healthStatus === 'healthy'
+      ? 'Seu fluxo está positivo e as despesas estão sob controle.'
+      : healthStatus === 'attention'
+        ? 'Você ainda tem controle, mas a margem de economia está apertada.'
+        : 'As despesas estão comprometendo sua capacidade de guardar dinheiro.';
+
+  const topCategory =
+    categoryData.length > 0
+      ? [...categoryData].sort(
+          (a, b) => b.value - a.value,
+        )[0]
+      : null;
+
+  const dashboardInsights = [
+    filteredIncome > 0
+      ? `Você economizou ${savingsRate.toFixed(
+          1,
+        )}% da renda no período selecionado.`
+      : 'Cadastre receitas para calcular sua taxa de economia.',
+    topCategory
+      ? `${topCategory.category} é a categoria com maior impacto: ${formatMoney(
+          topCategory.value,
+        )}.`
+      : 'Ainda não há despesas suficientes para identificar categorias críticas.',
+    mostAdvancedGoal
+      ? `Sua meta mais avançada é ${mostAdvancedGoal.title}, com ${mostAdvancedGoalProgress.toFixed(
+          0,
+        )}% concluído.`
+      : 'Crie uma meta para o MyFlow acompanhar seu progresso financeiro.',
+  ];
+
+  const projectedAnnualSavings =
+    filteredBalance > 0
+      ? filteredBalance * 12
+      : 0;
+
+  const executiveSummaryTitle =
+    filteredBalance >= 0
+      ? 'Seu fluxo está positivo'
+      : 'Seu fluxo precisa de atenção';
+
+  const executiveSummaryDescription =
+    filteredBalance >= 0
+      ? `Você recebeu ${formatMoney(filteredIncome)}, gastou ${formatMoney(filteredExpense)} e sobrou ${formatMoney(filteredBalance)} no período. Mantendo esse ritmo, a projeção anual de economia é de ${formatMoney(projectedAnnualSavings)}.`
+      : `Você recebeu ${formatMoney(filteredIncome)}, gastou ${formatMoney(filteredExpense)} e fechou o período negativo em ${formatMoney(Math.abs(filteredBalance))}. Antes de novas compras, revise as categorias de maior impacto.`;
+
   const kpis = [
     {
-      label: 'Saldo',
+      label: 'Saldo Atual',
       value:
         formatMoney(
           filteredBalance,
         ),
       variant: 'balance' as const,
+      description:
+        filteredBalance >= 0
+          ? 'Resultado positivo no período.'
+          : 'Resultado negativo no período.',
+      trend:
+        filteredBalance >= 0
+          ? 'Fluxo positivo'
+          : 'Atenção ao saldo',
     },
     {
       label: 'Entradas',
@@ -678,6 +568,8 @@ export default function Dashboard() {
           filteredIncome,
         ),
       variant: 'income' as const,
+      description:
+        'Total recebido no filtro atual.',
     },
     {
       label: 'Despesas',
@@ -686,14 +578,27 @@ export default function Dashboard() {
           filteredExpense,
         ),
       variant: 'expense' as const,
+      description:
+        `${expenseRate.toFixed(1)}% da renda consumida.`,
     },
     {
       label:
-        'Transações',
-      value: String(
-        filteredByPeriod.length,
-      ),
-      variant: 'transactions' as const,
+        'Meta Principal',
+      value:
+        mostAdvancedGoal
+          ? `${mostAdvancedGoalProgress.toFixed(
+              0,
+            )}%`
+          : 'Criar meta',
+      variant: 'goal' as const,
+      description:
+        mostAdvancedGoal
+          ? mostAdvancedGoal.title
+          : 'Defina seu primeiro objetivo.',
+      trend:
+        mostAdvancedGoal
+          ? 'Em andamento'
+          : 'Comece agora',
     },
   ];
 
@@ -708,7 +613,6 @@ export default function Dashboard() {
     <div>
       <Topbar
         onNewTransaction={() => {
-          setEditId(null);
           resetForm();
           setShowModal(true);
         }}
@@ -803,95 +707,442 @@ export default function Dashboard() {
               variant={
                 item.variant
               }
+              description={
+                item.description
+              }
+              trend={
+                item.trend
+              }
             />
           ),
         )}
       </div>
 
-      <div className="transactions-wrapper">
-        <Card title="Resumo das Metas">
-          {goals.length === 0 ? (
-            <EmptyState
-              icon="🎯"
-              title="Nenhuma meta cadastrada"
-              description="Crie metas financeiras para acompanhar sua evolução patrimonial e seus principais objetivos."
+      <Card
+        title="Resumo Executivo"
+        subtitle="Leitura direta do período selecionado."
+      >
+        <div
+          className={`planning-diagnosis-card ${filteredBalance >= 0 ? 'healthy' : 'critical'}`}
+          style={{
+            display: 'grid',
+            gridTemplateColumns:
+              'minmax(0, 1fr) auto',
+            gap: 22,
+            alignItems: 'center',
+            padding: 22,
+          }}
+        >
+          <div>
+            <span className="goal-eyebrow">
+              Resultado do período
+            </span>
+
+            <div className="goal-values">
+              <strong>
+                {executiveSummaryTitle}
+              </strong>
+
+              <span>
+                {executiveSummaryDescription}
+              </span>
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns:
+                'repeat(3, minmax(110px, 1fr))',
+              gap: 12,
+            }}
+          >
+            <ExecutiveMiniMetric
+              label="Entrou"
+              value={formatMoney(filteredIncome)}
+              tone="income"
             />
-          ) : (
-            <div className="summary-list">
-              <div className="summary-item">
-                <span className="summary-label">
-                  Total acumulado
+
+            <ExecutiveMiniMetric
+              label="Saiu"
+              value={formatMoney(filteredExpense)}
+              tone="expense"
+            />
+
+            <ExecutiveMiniMetric
+              label="Sobrou"
+              value={formatMoney(filteredBalance)}
+              tone={filteredBalance >= 0 ? 'income' : 'expense'}
+            />
+          </div>
+        </div>
+      </Card>
+
+      <Card
+        title="Saúde Financeira"
+        subtitle="Painel executivo do seu fluxo, metas e capacidade de economia."
+      >
+        <div
+          className={`planning-diagnosis-card ${healthStatus}`}
+          style={{
+            display: 'grid',
+            gridTemplateColumns:
+              'minmax(0, 1fr) 280px',
+            gap: 32,
+            alignItems: 'stretch',
+          }}
+        >
+          <div
+            style={{
+              display: 'grid',
+              gap: 20,
+            }}
+          >
+            <div className="planning-diagnosis-header">
+              <div>
+                <span className="goal-eyebrow">
+                  Diagnóstico do período
                 </span>
 
-                <span className="summary-value income">
-                  {formatMoney(
-                    totalGoalsCurrent,
-                  )}
-                </span>
-              </div>
+                <div className="goal-values">
+                  <strong>
+                    {healthTitle}
+                  </strong>
 
-              <div className="summary-item">
-                <span className="summary-label">
-                  Valor alvo total
-                </span>
-
-                <span className="summary-value">
-                  {formatMoney(
-                    totalGoalsTarget,
-                  )}
-                </span>
-              </div>
-
-              <div className="summary-item">
-                <span className="summary-label">
-                  Progresso geral
-                </span>
-
-                <span className="summary-value">
-                  {goalsProgress.toFixed(1)}%
-                </span>
-              </div>
-
-              {mostAdvancedGoal && (
-                <div className="summary-item">
-                  <span className="summary-label">
-                    Meta mais avançada
-                  </span>
-
-                  <span className="summary-value">
-                    {mostAdvancedGoal.title}{' '}
-                    ({mostAdvancedGoalProgress.toFixed(0)}%)
+                  <span>
+                    {healthDescription}
                   </span>
                 </div>
-              )}
+              </div>
 
-              <div className="goal-progress">
-                <div
-                  className="goal-progress-bar"
-                  style={{
-                    width: `${goalsProgress}%`,
-                  }}
-                />
+              <div className="planning-metric-icon">
+                {healthStatus === 'healthy' && (
+                  <CheckCircle2 size={20} />
+                )}
+
+                {healthStatus === 'attention' && (
+                  <AlertTriangle size={20} />
+                )}
+
+                {healthStatus === 'critical' && (
+                  <XCircle size={20} />
+                )}
               </div>
             </div>
-          )}
-        </Card>
-      </div>
 
-      <div className="dashboard-grid">
-        <Card title="Fluxo Financeiro">
-          {monthlyData.length === 0 ? (
-            <EmptyState
-              icon="📈"
-              title="Sem dados para o gráfico"
-              description="Adicione receitas e despesas para visualizar a evolução do seu fluxo financeiro."
-            />
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns:
+                  'repeat(3, minmax(0, 1fr))',
+                gap: 14,
+              }}
+            >
+              <PremiumHealthMetric
+                label="Taxa de economia"
+                value={`${savingsRate.toFixed(
+                  1,
+                )}%`}
+                description="Quanto sobrou da renda."
+              />
+
+              <PremiumHealthMetric
+                label="Renda consumida"
+                value={`${expenseRate.toFixed(
+                  1,
+                )}%`}
+                description="Quanto foi usado em despesas."
+              />
+
+              <PremiumHealthMetric
+                label="Metas"
+                value={`${goalsProgress.toFixed(
+                  1,
+                )}%`}
+                description="Progresso financeiro acumulado."
+              />
+            </div>
+          </div>
+
+          <div
+            style={{
+              borderRadius: 28,
+              padding: 22,
+              display: 'grid',
+              placeItems: 'center',
+              background:
+                'linear-gradient(135deg, rgba(37, 99, 235, 0.16), rgba(15, 23, 42, 0.22))',
+              border:
+                '1px solid rgba(148, 163, 184, 0.16)',
+              boxShadow:
+                '0 24px 70px rgba(15, 23, 42, 0.18)',
+            }}
+          >
+            <div
+              style={{
+                width: 194,
+                height: 194,
+                borderRadius: '50%',
+                display: 'grid',
+                placeItems: 'center',
+                background:
+                  `conic-gradient(${
+                    healthStatus === 'healthy'
+                      ? '#22c55e'
+                      : healthStatus === 'attention'
+                        ? '#f59e0b'
+                        : '#ef4444'
+                  } ${financialScore * 3.6}deg, rgba(148, 163, 184, 0.18) 0deg)`,
+                boxShadow:
+                  '0 24px 60px rgba(15, 23, 42, 0.26)',
+              }}
+            >
+              <div
+                style={{
+                  width: 148,
+                  height: 148,
+                  borderRadius: '50%',
+                  display: 'grid',
+                  placeItems: 'center',
+                  background:
+                    'rgba(15, 23, 42, 0.94)',
+                  border:
+                    '1px solid rgba(255, 255, 255, 0.08)',
+                }}
+              >
+                <div
+                  style={{
+                    textAlign: 'center',
+                  }}
+                >
+                  <strong
+                    style={{
+                      display: 'block',
+                      fontSize: 56,
+                      lineHeight: 1,
+                      color: '#ffffff',
+                    }}
+                  >
+                    {financialScore}
+                  </strong>
+
+                  <span
+                    style={{
+                      display: 'block',
+                      marginTop: 4,
+                      fontSize: 12,
+                      color:
+                        'rgba(226, 232, 240, 0.8)',
+                    }}
+                  >
+                    de 100
+                  </span>
+
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      marginTop: 8,
+                      padding: '4px 8px',
+                      borderRadius: 999,
+                      fontSize: 11,
+                      fontWeight: 800,
+                      color:
+                        healthStatus === 'healthy'
+                          ? '#86efac'
+                          : healthStatus === 'attention'
+                            ? '#fcd34d'
+                            : '#fca5a5',
+                      background:
+                        'rgba(255, 255, 255, 0.06)',
+                    }}
+                  >
+                    {healthStatus === 'healthy'
+                      ? 'Saudável'
+                      : healthStatus === 'attention'
+                        ? 'Atenção'
+                        : 'Crítico'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <div
+        className="dashboard-grid"
+        style={{
+          gridTemplateColumns:
+            'minmax(0, 1.25fr) minmax(320px, 0.75fr)',
+          alignItems: 'stretch',
+        }}
+      >
+        <Card
+          title="Meta Principal"
+          subtitle="O objetivo que mais representa seu avanço financeiro."
+        >
+          {mostAdvancedGoal ? (
+            <div className="planning-diagnosis-card healthy">
+              <div className="planning-diagnosis-header">
+                <div>
+                  <span className="goal-eyebrow">
+                    Objetivo em destaque
+                  </span>
+
+                  <div className="goal-values">
+                    <strong>
+                      {mostAdvancedGoal.title}
+                    </strong>
+
+                    <span>
+                      {formatMoney(
+                        mostAdvancedGoal.currentAmount,
+                      )}{' '}
+                      acumulados de{' '}
+                      {formatMoney(
+                        mostAdvancedGoal.targetAmount,
+                      )}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="planning-metric-icon">
+                  <Target size={20} />
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gap: 14,
+                  marginTop: 20,
+                }}
+              >
+                <div
+                  style={{
+                    height: 18,
+                    borderRadius: 999,
+                    overflow: 'hidden',
+                    background:
+                      'rgba(148, 163, 184, 0.16)',
+                    border:
+                      '1px solid rgba(148, 163, 184, 0.18)',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${mostAdvancedGoalProgress}%`,
+                      height: '100%',
+                      borderRadius: 999,
+                      background:
+                        'linear-gradient(90deg, #2563eb, #22c55e)',
+                      boxShadow:
+                        '0 0 24px rgba(37, 99, 235, 0.45)',
+                    }}
+                  />
+                </div>
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns:
+                      'repeat(3, minmax(0, 1fr))',
+                    gap: 12,
+                  }}
+                >
+                  <PremiumHealthMetric
+                    label="Progresso"
+                    value={`${mostAdvancedGoalProgress.toFixed(
+                      1,
+                    )}%`}
+                    description="Da meta concluída."
+                  />
+
+                  <PremiumHealthMetric
+                    label="Acumulado"
+                    value={formatMoney(
+                      mostAdvancedGoal.currentAmount,
+                    )}
+                    description="Valor já guardado."
+                  />
+
+                  <PremiumHealthMetric
+                    label="Falta"
+                    value={formatMoney(
+                      Math.max(
+                        mostAdvancedGoal.targetAmount -
+                          mostAdvancedGoal.currentAmount,
+                        0,
+                      ),
+                    )}
+                    description="Para concluir."
+                  />
+                </div>
+              </div>
+            </div>
           ) : (
-            <FinanceChart
-              monthlyData={
-                monthlyData
-              }
-            />
+            <div className="planning-diagnosis-card attention">
+              <div className="planning-diagnosis-header">
+                <div>
+                  <span className="goal-eyebrow">
+                    Próximo passo essencial
+                  </span>
+
+                  <div className="goal-values">
+                    <strong>
+                      Configure sua primeira meta
+                    </strong>
+
+                    <span>
+                      O MyFlow fica mais inteligente quando existe um objetivo financeiro para orientar o orçamento.
+                    </span>
+                  </div>
+                </div>
+
+                <div className="planning-metric-icon">
+                  <Target size={20} />
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gap: 10,
+                  marginTop: 18,
+                }}
+              >
+                <SetupStep
+                  index={1}
+                  title="Crie uma meta"
+                  description="Defina o valor que quer alcançar."
+                />
+
+                <SetupStep
+                  index={2}
+                  title="Informe sua reserva"
+                  description="Use o Planejamento para registrar sua base financeira."
+                />
+
+                <SetupStep
+                  index={3}
+                  title="Acompanhe recomendações"
+                  description="O Dashboard passa a orientar suas decisões."
+                />
+              </div>
+
+              <div className="planning-actions">
+                <button
+                  type="button"
+                  className="primary-btn"
+                  onClick={() =>
+                    navigate('/goals')
+                  }
+                >
+                  <Target size={18} />
+                  Criar primeira meta
+                </button>
+              </div>
+            </div>
           )}
         </Card>
 
@@ -903,148 +1154,118 @@ export default function Dashboard() {
               description="Cadastre despesas para entender quais categorias mais impactam seu orçamento."
             />
           ) : (
-            <CategoryChart
-              data={
-                categoryData
-              }
-            />
+            <div
+              style={{
+                maxWidth: 380,
+                margin: '0 auto',
+              }}
+            >
+              <CategoryChart
+                data={
+                  categoryData
+                }
+              />
+            </div>
           )}
         </Card>
 
-        <Card title="Resumo do Mês">
-          <div className="summary-list">
-            <div className="summary-item">
-              <span className="summary-label">
-                Receitas
-              </span>
-
-              <span className="summary-value income">
-                {formatMoney(
-                  filteredIncome,
-                )}
-              </span>
-            </div>
-
-            <div className="summary-item">
-              <span className="summary-label">
-                Despesas
-              </span>
-
-              <span className="summary-value expense">
-                {formatMoney(
-                  filteredExpense,
-                )}
-              </span>
-            </div>
-
-            <div className="summary-item">
-              <span className="summary-label">
-                Saldo
-              </span>
-
-              <span className="summary-value">
-                {formatMoney(
-                  filteredBalance,
-                )}
-              </span>
-            </div>
-          </div>
-        </Card>
       </div>
 
-      <div className="transactions-wrapper">
-        <Card title="Últimas Transações">
-          <div className="filters-wrapper">
-            <input
-              type="text"
-              placeholder="Buscar transação..."
-              className="search-input"
-              value={search}
-              onChange={(
-                e,
-              ) =>
-                setSearch(
-                  e.target
-                    .value,
-                )
-              }
-            />
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 24,
+        }}
+      >
+        <Card
+          title="Insights Inteligentes"
+        subtitle="Leituras locais geradas a partir do seu fluxo financeiro, sem IA paga."
+      >
+        <div
+          style={{
+            display: 'grid',
+            gap: 14,
+          }}
+        >
+          {dashboardInsights.map(
+            (insight, index) => (
+              <InsightFeedItem
+                key={insight}
+                icon={
+                  index === 0
+                    ? 'shield'
+                    : index === 1
+                      ? 'lightbulb'
+                      : 'target'
+                }
+                title={
+                  index === 0
+                    ? 'Economia do período'
+                    : index === 1
+                      ? 'Categoria crítica'
+                      : 'Direção financeira'
+                }
+                description={insight}
+              />
+            ),
+          )}
+        </div>
+        </Card>
 
-            <select
-              className="filter-select"
-              value={
-                filterType
-              }
-              onChange={(
-                e,
-              ) =>
-                setFilterType(
-                  e.target
-                    .value as
-                    | 'all'
-                    | TransactionType,
-                )
-              }
-            >
-              <option value="all">
-                Todas
-              </option>
+        <Card
+          title="Plano de Ação"
+        subtitle="Checklist objetivo para melhorar seu controle financeiro."
+      >
+        <div
+          style={{
+            display: 'grid',
+            gap: 12,
+          }}
+        >
+          <ChecklistAction
+            done={filteredBalance >= 0}
+            title={
+              filteredBalance >= 0
+                ? 'Preservar saldo positivo'
+                : 'Recuperar saldo do período'
+            }
+            description={
+              filteredBalance >= 0
+                ? `Você fechou o período com ${formatMoney(filteredBalance)} de sobra. Direcione parte desse valor para suas metas.`
+                : `O período está negativo em ${formatMoney(Math.abs(filteredBalance))}. Revise gastos variáveis antes de assumir novas despesas.`
+            }
+          />
 
-              <option value="income">
-                Receitas
-              </option>
-
-              <option value="expense">
-                Despesas
-              </option>
-            </select>
-          </div>
-
-          {filteredTransactions.length === 0 ? (
-            <EmptyState
-              icon="📊"
-              title="Nenhuma transação encontrada"
-              description={
-                transactions.length === 0
-                  ? 'Adicione sua primeira receita ou despesa para começar a acompanhar sua vida financeira.'
-                  : 'Nenhum resultado corresponde aos filtros atuais. Ajuste a busca ou altere os filtros para visualizar suas transações.'
-              }
-              actionLabel={
-                transactions.length === 0
-                  ? '+ Nova transação'
-                  : undefined
-              }
-              onAction={
-                transactions.length === 0
-                  ? () => {
-                      setEditId(null);
-                      resetForm();
-                      setShowModal(true);
-                    }
-                  : undefined
-              }
-            />
-          ) : (
-            <TransactionsList
-              transactions={
-                filteredTransactions
-              }
-              onEdit={
-                editTransaction
-              }
-              onDelete={(
-                id,
-              ) =>
-                setDeleteId(id)
-              }
+          {topCategory && (
+            <ChecklistAction
+              done={false}
+              title={`Revisar ${topCategory.category}`}
+              description={`${topCategory.category} é sua maior categoria de despesa no período, com ${formatMoney(topCategory.value)}.`}
             />
           )}
-        </Card>
+
+          <ChecklistAction
+            done={Boolean(mostAdvancedGoal)}
+            title={
+              mostAdvancedGoal
+                ? 'Manter ritmo da meta'
+                : 'Criar uma meta financeira'
+            }
+            description={
+              mostAdvancedGoal
+                ? `${mostAdvancedGoal.title} está com ${mostAdvancedGoalProgress.toFixed(0)}% de progresso.`
+                : 'Sem uma meta, o MyFlow não consegue orientar suas decisões com precisão.'
+            }
+          />
+        </div>
+      </Card>
+
       </div>
 
       <TransactionModal
         showModal={showModal}
-        editId={editId}
+        editId={null}
         title={title}
         value={formattedValue}
         type={type}
@@ -1057,7 +1278,6 @@ export default function Dashboard() {
             return;
 
           setShowModal(false);
-          setEditId(null);
         }}
         onTitleChange={setTitle}
         onValueChange={
@@ -1068,31 +1288,310 @@ export default function Dashboard() {
           setCategory
         }
         onDateChange={setDate}
-        onSave={() =>
-          editId
-            ? saveEditedTransaction()
-            : addTransaction()
-        }
+        onSave={addTransaction}
       />
 
-      <ConfirmModal
-        open={Boolean(deleteId)}
-        title="Excluir transação?"
-        description="Essa ação não pode ser desfeita."
-        confirmText="Excluir"
-        cancelText="Cancelar"
-        loading={isDeleting}
-        onCancel={() =>
-          setDeleteId(null)
-        }
-        onConfirm={() => {
-          if (deleteId) {
-            removeTransaction(
-              deleteId,
-            );
-          }
-        }}
-      />
+
     </div>
   );
 }
+
+
+
+
+
+type ExecutiveMiniMetricProps = {
+  label: string;
+  value: string;
+  tone: 'income' | 'expense';
+};
+
+function ExecutiveMiniMetric({
+  label,
+  value,
+  tone,
+}: ExecutiveMiniMetricProps) {
+  return (
+    <div
+      style={{
+        minWidth: 110,
+        padding: '14px 16px',
+        borderRadius: 18,
+        background:
+          'rgba(15, 23, 42, 0.28)',
+        border:
+          tone === 'income'
+            ? '1px solid rgba(34, 197, 94, 0.22)'
+            : '1px solid rgba(248, 113, 113, 0.22)',
+      }}
+    >
+      <span className="planning-metric-label">
+        {label}
+      </span>
+
+      <strong
+        style={{
+          display: 'block',
+          marginTop: 8,
+          fontSize: 18,
+          color:
+            tone === 'income'
+              ? '#86efac'
+              : '#fca5a5',
+        }}
+      >
+        {value}
+      </strong>
+    </div>
+  );
+}
+
+type SetupStepProps = {
+  index: number;
+  title: string;
+  description: string;
+};
+
+function SetupStep({
+  index,
+  title,
+  description,
+}: SetupStepProps) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        gap: 12,
+        alignItems: 'flex-start',
+        padding: 12,
+        borderRadius: 16,
+        background:
+          'rgba(15, 23, 42, 0.24)',
+        border:
+          '1px solid rgba(148, 163, 184, 0.14)',
+      }}
+    >
+      <span
+        style={{
+          width: 26,
+          height: 26,
+          borderRadius: 10,
+          display: 'grid',
+          placeItems: 'center',
+          flexShrink: 0,
+          fontSize: 12,
+          fontWeight: 900,
+          color: '#bfdbfe',
+          background:
+            'rgba(37, 99, 235, 0.22)',
+        }}
+      >
+        {index}
+      </span>
+
+      <div>
+        <strong
+          style={{
+            display: 'block',
+            marginBottom: 2,
+          }}
+        >
+          {title}
+        </strong>
+
+        <p
+          className="planning-metric-description"
+          style={{
+            margin: 0,
+          }}
+        >
+          {description}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+type InsightFeedItemProps = {
+  icon: 'shield' | 'lightbulb' | 'target';
+  title: string;
+  description: string;
+};
+
+function InsightFeedItem({
+  icon,
+  title,
+  description,
+}: InsightFeedItemProps) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        gap: 16,
+        alignItems: 'flex-start',
+        padding: '18px 20px',
+        borderRadius: 22,
+        background:
+          'linear-gradient(135deg, rgba(15, 23, 42, 0.34), rgba(30, 41, 59, 0.42))',
+        border:
+          '1px solid rgba(148, 163, 184, 0.18)',
+        boxShadow:
+          '0 18px 44px rgba(15, 23, 42, 0.08)',
+      }}
+    >
+      <div className="planning-metric-icon">
+        {icon === 'shield' && (
+          <ShieldCheck size={18} />
+        )}
+
+        {icon === 'lightbulb' && (
+          <Lightbulb size={18} />
+        )}
+
+        {icon === 'target' && (
+          <Target size={18} />
+        )}
+      </div>
+
+      <div>
+        <strong
+          style={{
+            display: 'block',
+            marginBottom: 6,
+            fontSize: 15,
+          }}
+        >
+          {title}
+        </strong>
+
+        <p
+          className="planning-alert-item"
+          style={{
+            margin: 0,
+          }}
+        >
+          {description}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+type ChecklistActionProps = {
+  done: boolean;
+  title: string;
+  description: string;
+};
+
+function ChecklistAction({
+  done,
+  title,
+  description,
+}: ChecklistActionProps) {
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '32px minmax(0, 1fr)',
+        gap: 14,
+        alignItems: 'flex-start',
+        padding: '18px 20px',
+        borderRadius: 22,
+        background:
+          done
+            ? 'linear-gradient(135deg, rgba(22, 163, 74, 0.12), rgba(15, 23, 42, 0.24))'
+            : 'linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(15, 23, 42, 0.24))',
+        border:
+          done
+            ? '1px solid rgba(34, 197, 94, 0.28)'
+            : '1px solid rgba(245, 158, 11, 0.32)',
+      }}
+    >
+      <div
+        style={{
+          width: 32,
+          height: 32,
+          borderRadius: 12,
+          display: 'grid',
+          placeItems: 'center',
+          color: done ? '#86efac' : '#fcd34d',
+          background:
+            'rgba(255, 255, 255, 0.06)',
+        }}
+      >
+        {done ? (
+          <CheckCircle2 size={18} />
+        ) : (
+          <AlertTriangle size={18} />
+        )}
+      </div>
+
+      <div>
+        <strong
+          style={{
+            display: 'block',
+            marginBottom: 4,
+          }}
+        >
+          {title}
+        </strong>
+
+        <p
+          className="planning-alert-item"
+          style={{
+            margin: 0,
+          }}
+        >
+          {description}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+type PremiumHealthMetricProps = {
+  label: string;
+  value: string;
+  description: string;
+};
+
+function PremiumHealthMetric({
+  label,
+  value,
+  description,
+}: PremiumHealthMetricProps) {
+  return (
+    <div
+      className="planning-diagnosis-card"
+      style={{
+        padding: 16,
+      }}
+    >
+      <span className="planning-metric-label">
+        {label}
+      </span>
+
+      <strong
+        style={{
+          display: 'block',
+          marginTop: 8,
+          fontSize: 28,
+          lineHeight: 1,
+        }}
+      >
+        {value}
+      </strong>
+
+      <p
+        className="planning-metric-description"
+        style={{
+          marginTop: 8,
+          marginBottom: 0,
+        }}
+      >
+        {description}
+      </p>
+    </div>
+  );
+}
+

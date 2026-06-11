@@ -1,9 +1,7 @@
 import {
   LayoutDashboard,
   Receipt,
-  Tags,
   Target,
-  BarChart3,
   Wallet,
   Upload,
   ChevronLeft,
@@ -33,9 +31,9 @@ const menuItems = [
     path: '/transactions',
   },
   {
-    label: 'Categorias',
-    icon: Tags,
-    path: '/categories',
+    label: 'Importações',
+    icon: Upload,
+    path: '/imports',
   },
   {
     label: 'Metas',
@@ -46,16 +44,6 @@ const menuItems = [
     label: 'Planejamento',
     icon: Wallet,
     path: '/planning',
-  },
-  {
-    label: 'Importações',
-    icon: Upload,
-    path: '/imports',
-  },
-  {
-    label: 'Relatórios',
-    icon: BarChart3,
-    path: '/reports',
   },
 ];
 

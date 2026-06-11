@@ -438,6 +438,48 @@ export function useTransactions() {
     );
   }
 
+  async function removeTransactions(
+    ids: number[],
+  ) {
+    if (!user) {
+      handleError(
+        'Usuário não autenticado.',
+      );
+      return;
+    }
+
+    if (ids.length === 0) {
+      return;
+    }
+
+    const { error } =
+      await supabase
+        .from('transactions')
+        .delete()
+        .eq('user_id', user.id)
+        .in('id', ids);
+
+    if (error) {
+      handleError(error.message);
+      return;
+    }
+
+    const idsSet =
+      new Set(ids);
+
+    setTransactions(
+      (prev) =>
+        prev.filter(
+          (item) =>
+            !idsSet.has(item.id),
+        ),
+    );
+
+    notifySuccess(
+      `${ids.length} transação(ões) removida(s).`,
+    );
+  }
+
   async function updateTransaction(
     updatedTransaction: Transaction,
   ) {
@@ -535,6 +577,8 @@ export function useTransactions() {
     importTransactions,
 
     removeTransaction,
+
+    removeTransactions,
 
     updateTransaction,
   };
