@@ -1,4 +1,5 @@
 import {
+  useMemo,
   useState,
 } from 'react';
 
@@ -6,6 +7,16 @@ import {
   Upload,
   Trash2,
   FileSpreadsheet,
+  CloudUpload,
+  FileText,
+  CheckCircle2,
+  AlertTriangle,
+  Eye,
+  Sparkles,
+  ListChecks,
+  ShieldCheck,
+  ArrowDownCircle,
+  ArrowUpCircle,
 } from 'lucide-react';
 
 import Card from '../components/Card';
@@ -726,212 +737,497 @@ export default function Imports() {
     }
   }
 
-  return (
-    <div>
-      <div className="dashboard-header">
-        <h1 className="dashboard-title">
-          Importações
-        </h1>
+  const categorizedCount =
+    reviewItems.filter(
+      (item) =>
+        !item.ignored &&
+        item.selectedCategory &&
+        item.selectedCategory !==
+          'Sem categoria',
+    ).length;
 
-        <p className="dashboard-subtitle">
-          Importe extratos financeiros por CSV, PDF extraível ou OFX. O MyFlow identifica o formato, gera uma prévia e evita duplicidades.
-        </p>
+  const ignoredCount =
+    reviewItems.filter(
+      (item) => item.ignored,
+    ).length;
+
+  const classificationRate =
+    reviewItems.length > 0
+      ? Math.round(
+          (categorizedCount /
+            reviewItems.length) *
+            100,
+        )
+      : 0;
+
+  const highConfidenceCount =
+    reviewItems.filter(
+      (item) =>
+        item.confidence === 'high',
+    ).length;
+
+  const previewRows =
+    useMemo(
+      () =>
+        reviewItems
+          .filter((item) => !item.ignored)
+          .slice(0, 8),
+      [reviewItems],
+    );
+
+  const topCategory =
+    useMemo(() => {
+      if (reviewItems.length === 0) {
+        return null;
+      }
+
+      const categoryTotals =
+        new Map<
+          string,
+          {
+            count: number;
+            amount: number;
+          }
+        >();
+
+      reviewItems.forEach((item) => {
+        if (
+          item.ignored ||
+          !item.selectedCategory
+        ) {
+          return;
+        }
+
+        const current =
+          categoryTotals.get(
+            item.selectedCategory,
+          ) ?? {
+            count: 0,
+            amount: 0,
+          };
+
+        current.count += 1;
+        current.amount +=
+          Math.abs(item.amount);
+
+        categoryTotals.set(
+          item.selectedCategory,
+          current,
+        );
+      });
+
+      const [category, data] =
+        Array.from(
+          categoryTotals.entries(),
+        ).sort(
+          (a, b) =>
+            b[1].amount -
+            a[1].amount,
+        )[0] ?? [];
+
+      if (!category || !data) {
+        return null;
+      }
+
+      return {
+        category,
+        ...data,
+      };
+    }, [reviewItems]);
+
+  return (
+    <div className="imports-page">
+      <div className="dashboard-header imports-header">
+        <div>
+          <h1 className="dashboard-title">
+            Importações
+          </h1>
+
+          <p className="dashboard-subtitle">
+            Envie extratos CSV, OFX ou PDF extraível. O MyFlow lê, classifica e prepara os lançamentos para revisão antes de salvar.
+          </p>
+        </div>
+
+        {preview && (
+          <div className="imports-header-badge">
+            <Sparkles size={16} />
+            Prévia pronta para revisão
+          </div>
+        )}
       </div>
 
       <Card
         title="Nova importação"
-        subtitle="Selecione um arquivo e revise os dados antes de lançar as transações."
+        subtitle="Arraste ou selecione seu extrato financeiro para começar."
       >
-        <div className="planning-form">
-          <label className="planning-input-field">
-            <span className="planning-input-label">
-              Arquivo
-            </span>
-
+        <div className="imports-upload-grid">
+          <label className="imports-dropzone">
             <input
-              className="search-input"
               type="file"
               accept=".csv,text/csv,.pdf,application/pdf,.ofx,.qfx"
               onChange={handleFileChange}
             />
+
+            <div className="imports-dropzone-icon">
+              {readingFile ? (
+                <FileText size={28} />
+              ) : (
+                <CloudUpload size={30} />
+              )}
+            </div>
+
+            <div>
+              <strong>
+                {selectedFileName
+                  ? selectedFileName
+                  : 'Arraste seu extrato aqui'}
+              </strong>
+
+              <span>
+                {readingFile
+                  ? 'Processando arquivo...'
+                  : 'ou clique para selecionar CSV, OFX ou PDF extraível'}
+              </span>
+            </div>
+
+            <div className="imports-file-types">
+              <span>CSV</span>
+              <span>OFX</span>
+              <span>PDF</span>
+            </div>
           </label>
 
-          {readingFile && (
-            <p className="dashboard-subtitle">
-              Processando arquivo...
-            </p>
-          )}
-
-          {selectedFileName && (
-            <div className="planning-diagnosis-card healthy">
-              <div className="planning-diagnosis-header">
-                <div>
-                  <span className="goal-eyebrow">
-                    Arquivo selecionado
-                  </span>
-
-                  <div className="goal-values">
-                    <strong>
-                      {selectedFileName}
-                    </strong>
-
-                    <span>
-                      Tipo detectado:{' '}
-                      {getImportFileLabel(
-                        detectedType,
-                      )}
-                      {detectedType === 'csv' &&
-                        ` · ${csvHeaders.length} colunas encontradas`}
-                      {detectedType === 'pdf' &&
-                        ' · PDF extraível'}
-                      {detectedType === 'ofx' &&
-                        ' · Arquivo bancário'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="planning-metric-icon">
-                  <FileSpreadsheet size={20} />
-                </div>
+          <div className="imports-upload-side">
+            <div className="imports-process-step active">
+              <span>1</span>
+              <div>
+                <strong>
+                  Ler arquivo
+                </strong>
+                <p>
+                  O MyFlow identifica formato, colunas e transações.
+                </p>
               </div>
             </div>
-          )}
 
-          {detectedType === 'csv' &&
-            csvHeaders.length > 0 && (
-              <div className="planning-section">
-                <div className="planning-section-header">
+            <div
+              className={`imports-process-step ${
+                preview ? 'active' : ''
+              }`}
+            >
+              <span>2</span>
+              <div>
+                <strong>
+                  Revisar prévia
+                </strong>
+                <p>
+                  Confirme categorias e ignore o que não deve entrar.
+                </p>
+              </div>
+            </div>
+
+            <div
+              className={`imports-process-step ${
+                reviewItems.length > 0
+                  ? 'active'
+                  : ''
+              }`}
+            >
+              <span>3</span>
+              <div>
+                <strong>
+                  Importar
+                </strong>
+                <p>
+                  Salve apenas lançamentos revisados e sem duplicidade.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {selectedFileName && (
+          <div className="imports-selected-file">
+            <div>
+              <span className="goal-eyebrow">
+                Arquivo selecionado
+              </span>
+
+              <strong>
+                {selectedFileName}
+              </strong>
+
+              <p>
+                Tipo detectado:{' '}
+                {getImportFileLabel(
+                  detectedType,
+                )}
+                {detectedType === 'csv' &&
+                  ` · ${csvHeaders.length} colunas encontradas`}
+                {detectedType === 'pdf' &&
+                  ' · PDF extraível'}
+                {detectedType === 'ofx' &&
+                  ' · Arquivo bancário'}
+              </p>
+            </div>
+
+            <div className="planning-metric-icon">
+              <FileSpreadsheet size={20} />
+            </div>
+          </div>
+        )}
+
+        {detectedType === 'csv' &&
+          csvHeaders.length > 0 && (
+            <div className="imports-mapping-card">
+              <div className="imports-section-title">
+                <div>
                   <span className="goal-eyebrow">
                     Mapeamento das colunas
                   </span>
 
-                  <span className="planning-input-label">
-                    Confirme quais colunas representam data, descrição e valor.
-                  </span>
+                  <strong>
+                    Confirme os campos do CSV
+                  </strong>
                 </div>
 
-                <div className="planning-input-grid two">
-                  <ColumnSelect
-                    label="Coluna de data"
-                    value={dateColumn}
-                    headers={csvHeaders}
-                    onChange={setDateColumn}
-                  />
-
-                  <ColumnSelect
-                    label="Coluna de descrição"
-                    value={descriptionColumn}
-                    headers={csvHeaders}
-                    onChange={
-                      setDescriptionColumn
-                    }
-                  />
-
-                  <ColumnSelect
-                    label="Coluna de valor"
-                    value={amountColumn}
-                    headers={csvHeaders}
-                    onChange={setAmountColumn}
-                  />
-                </div>
-
-                <div className="planning-actions">
-                  <button
-                    type="button"
-                    className="secondary-btn"
-                    onClick={handleBuildCsvPreview}
-                  >
-                    Gerar pré-visualização
-                  </button>
-                </div>
+                <span>
+                  Ajuste apenas se a sugestão automática estiver incorreta.
+                </span>
               </div>
-            )}
 
-          {preview && (
-            <div className="planning-metrics-grid">
-              <ImportSummaryCard
-                label="Transações"
-                value={String(
-                  preview.transactions.length,
-                )}
-                description="Total encontrado no arquivo."
-              />
+              <div className="planning-input-grid three">
+                <ColumnSelect
+                  label="Coluna de data"
+                  value={dateColumn}
+                  headers={csvHeaders}
+                  onChange={setDateColumn}
+                />
 
-              <ImportSummaryCard
-                label="Receitas"
-                value={formatCurrency(
-                  preview.incomeTotal,
-                )}
-                description={`${preview.incomeCount} lançamento(s) de entrada.`}
-              />
+                <ColumnSelect
+                  label="Coluna de descrição"
+                  value={descriptionColumn}
+                  headers={csvHeaders}
+                  onChange={
+                    setDescriptionColumn
+                  }
+                />
 
-              <ImportSummaryCard
-                label="Despesas"
-                value={formatCurrency(
-                  preview.expenseTotal,
-                )}
-                description={`${preview.expenseCount} lançamento(s) de saída.`}
-              />
+                <ColumnSelect
+                  label="Coluna de valor"
+                  value={amountColumn}
+                  headers={csvHeaders}
+                  onChange={setAmountColumn}
+                />
+              </div>
 
-              <ImportSummaryCard
-                label="Saldo do arquivo"
-                value={formatCurrency(
-                  preview.balance,
-                )}
-                description="Receitas menos despesas."
-              />
+              <div className="planning-actions">
+                <button
+                  type="button"
+                  className="secondary-btn imports-secondary-action"
+                  onClick={handleBuildCsvPreview}
+                >
+                  <Eye size={17} />
+                  Gerar pré-visualização
+                </button>
+              </div>
             </div>
           )}
 
-          <div className="planning-actions">
-            <LoadingButton
-              className="primary-btn"
-              isLoading={saving}
-              onClick={handleSaveImport}
-            >
-              <Upload size={18} />
-              {saving
-                ? 'Importando...'
-                : 'Importar transações'}
-            </LoadingButton>
-          </div>
+        <div className="imports-main-action">
+          <LoadingButton
+            className="primary-btn imports-import-button"
+            isLoading={saving}
+            onClick={handleSaveImport}
+          >
+            <Upload size={18} />
+            {saving
+              ? 'Importando...'
+              : 'Importar transações'}
+          </LoadingButton>
         </div>
       </Card>
 
+      <div className="imports-summary-grid">
+        <ImportSummaryCard
+          label="Movimentações"
+          value={
+            preview
+              ? String(
+                  preview.transactions.length,
+                )
+              : '0'
+          }
+          description="Total identificado no arquivo."
+          icon="list"
+        />
+
+        <ImportSummaryCard
+          label="Receitas"
+          value={
+            preview
+              ? formatCurrency(
+                  preview.incomeTotal,
+                )
+              : formatCurrency(0)
+          }
+          description={
+            preview
+              ? `${preview.incomeCount} entrada(s) encontrada(s).`
+              : 'Nenhuma entrada identificada.'
+          }
+          icon="income"
+        />
+
+        <ImportSummaryCard
+          label="Despesas"
+          value={
+            preview
+              ? formatCurrency(
+                  preview.expenseTotal,
+                )
+              : formatCurrency(0)
+          }
+          description={
+            preview
+              ? `${preview.expenseCount} saída(s) encontrada(s).`
+              : 'Nenhuma saída identificada.'
+          }
+          icon="expense"
+        />
+
+        <ImportSummaryCard
+          label="Classificação"
+          value={`${classificationRate}%`}
+          description="Transações com categoria definida."
+          icon="shield"
+        />
+      </div>
+
       <Card
-        title="Qualidade da importação"
-        subtitle="Avaliação automática das transações identificadas."
+        title="Resumo da leitura"
+        subtitle="Indicadores automáticos da importação antes de salvar."
       >
         {reviewItems.length > 0 ? (
-          <ImportQualityCard
-            items={reviewItems}
-          />
+          <div className="imports-insights-grid">
+            <ImportInsight
+              tone="success"
+              title="Arquivo processado"
+              description={`${reviewItems.length} movimentação(ões) preparada(s) para revisão.`}
+            />
+
+            <ImportInsight
+              tone={
+                classificationRate >= 80
+                  ? 'success'
+                  : 'warning'
+              }
+              title="Qualidade de classificação"
+              description={`${classificationRate}% das movimentações já possuem categoria.`}
+            />
+
+            <ImportInsight
+              tone="neutral"
+              title="Maior categoria"
+              description={
+                topCategory
+                  ? `${topCategory.category}: ${formatCurrency(topCategory.amount)} em ${topCategory.count} lançamento(s).`
+                  : 'Ainda não há categoria predominante.'
+              }
+            />
+
+            <ImportInsight
+              tone={
+                ignoredCount > 0
+                  ? 'warning'
+                  : 'success'
+              }
+              title="Revisão pendente"
+              description={
+                ignoredCount > 0
+                  ? `${ignoredCount} movimentação(ões) marcada(s) para ignorar.`
+                  : `${highConfidenceCount} movimentação(ões) com alta confiança.`
+              }
+            />
+          </div>
         ) : (
           <EmptyState
             icon="📊"
-            title="Nenhuma análise disponível"
-            description="Importe um arquivo para visualizar a qualidade da classificação."
+            title="Nenhuma leitura disponível"
+            description="Selecione um arquivo para visualizar a qualidade, categorias e prévia das transações."
           />
         )}
       </Card>
 
-      <Card
-        title="Categorias identificadas"
-        subtitle="Clique em uma categoria para revisar as transações."
-      >
-        {reviewItems.length > 0 ? (
-          <ImportCategorySummary
-            items={reviewItems}
-            onSelectCategory={setSelectedCategory}
-          />
-        ) : (
-          <EmptyState
-            icon="📂"
-            title="Nenhuma categoria encontrada"
-            description="As categorias aparecerão após a leitura do arquivo."
-          />
-        )}
-      </Card>
+      <div className="imports-review-grid">
+        <Card
+          title="Categorias identificadas"
+          subtitle="Clique em uma categoria para revisar os lançamentos."
+        >
+          {reviewItems.length > 0 ? (
+            <ImportCategorySummary
+              items={reviewItems}
+              onSelectCategory={
+                setSelectedCategory
+              }
+            />
+          ) : (
+            <EmptyState
+              icon="📂"
+              title="Nenhuma categoria encontrada"
+              description="As categorias aparecerão após a leitura do arquivo."
+            />
+          )}
+        </Card>
+
+        <Card
+          title="Preview das transações"
+          subtitle="Amostra dos lançamentos que serão importados."
+        >
+          {previewRows.length > 0 ? (
+            <div className="imports-preview-list">
+              {previewRows.map((item) => (
+                <div
+                  key={item.id}
+                  className="imports-preview-row"
+                >
+                  <div>
+                    <strong>
+                      {item.description}
+                    </strong>
+
+                    <span>
+                      {item.date} ·{' '}
+                      {item.selectedCategory}
+                    </span>
+                  </div>
+
+                  <span
+                    className={
+                      item.type === 'income'
+                        ? 'income'
+                        : 'expense'
+                    }
+                  >
+                    {item.type === 'income'
+                      ? '+'
+                      : '-'}
+                    {formatCurrency(
+                      Math.abs(item.amount),
+                    )}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              icon="👁️"
+              title="Nenhuma prévia disponível"
+              description="Depois da leitura, as primeiras transações aparecerão aqui para conferência."
+            />
+          )}
+        </Card>
+      </div>
 
       <ImportCategoryModal
         category={selectedCategory}
@@ -943,7 +1239,7 @@ export default function Imports() {
 
       <Card
         title="Histórico de importações"
-        subtitle="Lotes de arquivos já processados."
+        subtitle="Arquivos processados e seus respectivos status."
       >
         {loading ? (
           <p className="dashboard-subtitle">
@@ -956,56 +1252,63 @@ export default function Imports() {
             description="Os lotes importados aparecerão aqui."
           />
         ) : (
-          <div className="planning-metrics-grid">
+          <div className="imports-history-list">
             {imports.map((item) => (
               <div
                 key={item.id}
-                className="planning-metric-card"
+                className="imports-history-row"
               >
-                <div className="planning-metric-top">
+                <div className="imports-history-file">
+                  <div className="imports-history-icon">
+                    <FileSpreadsheet size={18} />
+                  </div>
+
                   <div>
-                    <span className="planning-metric-label">
+                    <span>
                       {item.source.toUpperCase()}
                     </span>
 
-                    <strong className="planning-metric-value">
+                    <strong>
                       {item.file_name}
                     </strong>
                   </div>
-
-                  <button
-                    type="button"
-                    className="delete-btn"
-                    disabled={
-                      deletingId === item.id
-                    }
-                    onClick={() =>
-                      handleDeleteImport(
-                        item.id,
-                      )
-                    }
-                    title="Excluir lote e transações"
-                  >
-                    <Trash2 size={18} />
-                  </button>
                 </div>
 
-                <p className="planning-metric-description">
-                  Encontradas:{' '}
-                  <strong>
-                    {item.total_transactions}
-                  </strong>
-                  <br />
-                  Importadas:{' '}
-                  <strong>
-                    {item.imported_transactions}
-                  </strong>
-                  <br />
-                  Status:{' '}
-                  <strong>
+                <div className="imports-history-metrics">
+                  <span>
+                    Encontradas:{' '}
+                    <strong>
+                      {item.total_transactions}
+                    </strong>
+                  </span>
+
+                  <span>
+                    Importadas:{' '}
+                    <strong>
+                      {item.imported_transactions}
+                    </strong>
+                  </span>
+
+                  <span className={`imports-status ${item.status}`}>
                     {item.status}
-                  </strong>
-                </p>
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  className="delete-btn"
+                  disabled={
+                    deletingId === item.id
+                  }
+                  onClick={() =>
+                    handleDeleteImport(
+                      item.id,
+                    )
+                  }
+                  title="Excluir lote e transações"
+                >
+                  <Trash2 size={18} />
+                </button>
               </div>
             ))}
           </div>
@@ -1035,7 +1338,7 @@ function ColumnSelect({
       </span>
 
       <select
-        className="filter-select"
+        className="filter-select imports-select"
         value={value}
         onChange={(event) =>
           onChange(event.target.value)
@@ -1062,30 +1365,97 @@ type ImportSummaryCardProps = {
   label: string;
   value: string;
   description: string;
+  icon:
+    | 'list'
+    | 'income'
+    | 'expense'
+    | 'shield';
 };
 
 function ImportSummaryCard({
   label,
   value,
   description,
+  icon,
 }: ImportSummaryCardProps) {
-  return (
-    <div className="planning-metric-card">
-      <div className="planning-metric-top">
-        <div>
-          <span className="planning-metric-label">
-            {label}
-          </span>
+  function renderIcon() {
+    if (icon === 'income') {
+      return <ArrowUpCircle size={20} />;
+    }
 
-          <strong className="planning-metric-value">
-            {value}
-          </strong>
+    if (icon === 'expense') {
+      return <ArrowDownCircle size={20} />;
+    }
+
+    if (icon === 'shield') {
+      return <ShieldCheck size={20} />;
+    }
+
+    return <ListChecks size={20} />;
+  }
+
+  return (
+    <div className="imports-summary-card">
+      <div className="imports-summary-top">
+        <div className="imports-summary-icon">
+          {renderIcon()}
         </div>
+
+        <span>
+          {label}
+        </span>
       </div>
 
-      <p className="planning-metric-description">
+      <strong>
+        {value}
+      </strong>
+
+      <p>
         {description}
       </p>
+    </div>
+  );
+}
+
+type ImportInsightProps = {
+  tone:
+    | 'success'
+    | 'warning'
+    | 'neutral';
+  title: string;
+  description: string;
+};
+
+function ImportInsight({
+  tone,
+  title,
+  description,
+}: ImportInsightProps) {
+  return (
+    <div className={`imports-insight ${tone}`}>
+      <div className="imports-insight-icon">
+        {tone === 'success' && (
+          <CheckCircle2 size={18} />
+        )}
+
+        {tone === 'warning' && (
+          <AlertTriangle size={18} />
+        )}
+
+        {tone === 'neutral' && (
+          <Sparkles size={18} />
+        )}
+      </div>
+
+      <div>
+        <strong>
+          {title}
+        </strong>
+
+        <p>
+          {description}
+        </p>
+      </div>
     </div>
   );
 }

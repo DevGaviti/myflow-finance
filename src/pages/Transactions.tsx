@@ -3,10 +3,15 @@ import {
   useState,
 } from 'react';
 
+import {
+  ChevronDown,
+} from 'lucide-react';
+
 import toast from 'react-hot-toast';
 
 import Card from '../components/Card';
 import TransactionsList from '../components/TransactionsList';
+import KPICard from '../components/KPICard';
 import TransactionModal from '../components/TransactionModal';
 import ConfirmModal from '../components/ConfirmModal';
 import EmptyState from '../components/EmptyState';
@@ -49,6 +54,11 @@ export default function Transactions() {
     useState<
       'all' | TransactionType
     >('all');
+
+  const [
+    filterCategory,
+    setFilterCategory,
+  ] = useState('all');
 
   const [showModal, setShowModal] =
     useState(false);
@@ -287,6 +297,21 @@ export default function Transactions() {
     }
   }
 
+  const categoryOptions =
+    useMemo(
+      () =>
+        Array.from(
+          new Set([
+            ...categories,
+            ...transactions.map(
+              (transaction) =>
+                transaction.category,
+            ),
+          ]),
+        ).filter(Boolean),
+      [transactions],
+    );
+
   const filteredTransactions =
     transactions.filter((item) => {
       const matchesSearch =
@@ -307,11 +332,105 @@ export default function Transactions() {
           : item.type ===
             filterType;
 
+      const matchesCategory =
+        filterCategory === 'all'
+          ? true
+          : item.category ===
+            filterCategory;
+
       return (
         matchesSearch &&
-        matchesType
+        matchesType &&
+        matchesCategory
       );
     });
+
+  const filteredIncome =
+    filteredTransactions
+      .filter(
+        (item) =>
+          item.type === 'income',
+      )
+      .reduce(
+        (acc, item) =>
+          acc + item.value,
+        0,
+      );
+
+  const filteredExpense =
+    filteredTransactions
+      .filter(
+        (item) =>
+          item.type === 'expense',
+      )
+      .reduce(
+        (acc, item) =>
+          acc + item.value,
+        0,
+      );
+
+  const filteredBalance =
+    filteredIncome -
+    filteredExpense;
+
+  const hasActiveFilters =
+    Boolean(search.trim()) ||
+    filterType !== 'all' ||
+    filterCategory !== 'all';
+
+  const transactionKpis = [
+    {
+      label: 'Saldo',
+      value:
+        formatMoney(
+          filteredBalance,
+        ),
+      variant: 'balance' as const,
+      description:
+        'Resultado das transações filtradas.',
+      trend:
+        filteredBalance >= 0
+          ? 'Positivo'
+          : 'Atenção',
+    },
+    {
+      label: 'Entradas',
+      value:
+        formatMoney(
+          filteredIncome,
+        ),
+      variant: 'income' as const,
+      description:
+        'Receitas encontradas no filtro.',
+    },
+    {
+      label: 'Saídas',
+      value:
+        formatMoney(
+          filteredExpense,
+        ),
+      variant: 'expense' as const,
+      description:
+        'Despesas encontradas no filtro.',
+    },
+    {
+      label: 'Movimentações',
+      value: String(
+        filteredTransactions.length,
+      ),
+      variant: 'score' as const,
+      description:
+        'Total de lançamentos visíveis.',
+      trend:
+        filterCategory !== 'all'
+          ? filterCategory
+          : filterType === 'income'
+            ? 'Receitas'
+            : filterType === 'expense'
+              ? 'Despesas'
+              : 'Todas',
+    },
+  ];
 
   const selectedTransactions =
     useMemo(
@@ -450,7 +569,7 @@ export default function Transactions() {
   }
 
   return (
-    <div>
+    <div className="transactions-page">
       <div className="dashboard-header">
         <h1 className="dashboard-title">
           Transações
@@ -461,12 +580,47 @@ export default function Transactions() {
         </p>
       </div>
 
-      <Card title="Todas as Transações">
-        <div className="filters-wrapper">
+      <div className="kpi-grid transactions-kpi-grid">
+        {transactionKpis.map(
+          (item) => (
+            <KPICard
+              key={item.label}
+              label={item.label}
+              value={item.value}
+              variant={item.variant}
+              description={
+                item.description
+              }
+              trend={item.trend}
+            />
+          ),
+        )}
+      </div>
+
+      <Card
+        title="Todas as Transações"
+        subtitle="Busque, filtre, edite ou exporte seus lançamentos."
+      >
+        <div className="transactions-panel-summary">
+          <span>
+            Mostrando {filteredTransactions.length}{' '}
+            {filteredTransactions.length === 1
+              ? 'transação'
+              : 'transações'}
+          </span>
+
+          {hasActiveFilters && (
+            <strong>
+              Filtros aplicados
+            </strong>
+          )}
+        </div>
+
+        <div className="filters-wrapper transactions-filters">
           <input
             type="text"
             placeholder="Buscar transação..."
-            className="search-input"
+            className="search-input transactions-search-input"
             value={search}
             onChange={(e) =>
               setSearch(
@@ -475,39 +629,92 @@ export default function Transactions() {
             }
           />
 
-          <select
-            className="filter-select"
-            value={filterType}
-            onChange={(e) =>
-              setFilterType(
-                e.target.value as
-                  | 'all'
-                  | TransactionType,
-              )
-            }
-          >
-            <option value="all">
-              Todas
-            </option>
+          <div className="transactions-select-wrapper">
+            <select
+              className="filter-select transactions-filter-select"
+              value={filterType}
+              onChange={(e) =>
+                setFilterType(
+                  e.target.value as
+                    | 'all'
+                    | TransactionType,
+                )
+              }
+            >
+              <option value="all">
+                Todas
+              </option>
 
-            <option value="income">
-              Receitas
-            </option>
+              <option value="income">
+                Receitas
+              </option>
 
-            <option value="expense">
-              Despesas
-            </option>
-          </select>
+              <option value="expense">
+                Despesas
+              </option>
+            </select>
+
+            <ChevronDown
+              className="transactions-select-icon"
+              size={18}
+            />
+          </div>
+
+          <div className="transactions-select-wrapper">
+            <select
+              className="filter-select transactions-filter-select"
+              value={filterCategory}
+              onChange={(e) =>
+                setFilterCategory(
+                  e.target.value,
+                )
+              }
+            >
+              <option value="all">
+                Todas categorias
+              </option>
+
+              {categoryOptions.map(
+                (categoryOption) => (
+                  <option
+                    key={categoryOption}
+                    value={categoryOption}
+                  >
+                    {categoryOption}
+                  </option>
+                ),
+              )}
+            </select>
+
+            <ChevronDown
+              className="transactions-select-icon"
+              size={18}
+            />
+          </div>
+
+          {hasActiveFilters && (
+            <button
+              type="button"
+              className="secondary-btn transactions-clear-btn"
+              onClick={() => {
+                setSearch('');
+                setFilterType('all');
+                setFilterCategory('all');
+              }}
+            >
+              Limpar filtros
+            </button>
+          )}
 
           <button
-            className="secondary-btn"
+            className="secondary-btn transactions-export-btn"
             onClick={handleExportCSV}
           >
             Exportar CSV
           </button>
 
           <button
-            className="primary-btn"
+            className="primary-btn transactions-add-btn"
             onClick={
               handleNewTransaction
             }
@@ -519,36 +726,13 @@ export default function Transactions() {
         {!isLoading &&
           filteredTransactions.length > 0 && (
             <div
-              style={{
-                display: 'flex',
-                justifyContent:
-                  'space-between',
-                alignItems: 'center',
-                gap: 16,
-                flexWrap: 'wrap',
-                marginBottom: 18,
-                padding: '14px 16px',
-                border:
-                  selectedIds.length > 0
-                    ? '1px solid rgba(59, 130, 246, 0.28)'
-                    : '1px solid rgba(148, 163, 184, 0.18)',
-                borderRadius: 18,
-                background:
-                  selectedIds.length > 0
-                    ? 'rgba(37, 99, 235, 0.08)'
-                    : 'rgba(15, 23, 42, 0.16)',
-              }}
+              className={`transactions-selection-bar ${
+                selectedIds.length > 0
+                  ? 'has-selection'
+                  : ''
+              }`}
             >
-              <label
-                className="planning-input-label"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  cursor: 'pointer',
-                  margin: 0,
-                }}
-              >
+              <label className="transactions-select-all">
                 <input
                   type="checkbox"
                   checked={allFilteredSelected}
@@ -557,52 +741,46 @@ export default function Transactions() {
                   }
                 />
 
-                {allFilteredSelected
-                  ? 'Desmarcar todas filtradas'
-                  : 'Selecionar todas filtradas'}
+                <span>
+                  {allFilteredSelected
+                    ? 'Desmarcar todas filtradas'
+                    : 'Selecionar todas filtradas'}
+                </span>
               </label>
 
               {selectedIds.length > 0 && (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  <span className="category-badge">
-                    {selectedIds.length} selecionada(s)
-                  </span>
+                <div className="transactions-bulk-actions">
+                  <div className="transactions-bulk-info">
+                    <span className="transactions-bulk-chip">
+                      {selectedIds.length} selecionada(s)
+                    </span>
 
-                  <span className="category-badge">
-                    Total: {formatMoney(selectedTotal)}
-                  </span>
+                    <span className="transactions-bulk-chip">
+                      Total: {formatMoney(selectedTotal)}
+                    </span>
+                  </div>
 
-                  <button
-                    type="button"
-                    className="secondary-btn"
-                    onClick={clearSelection}
-                  >
-                    Limpar seleção
-                  </button>
+                  <div className="transactions-bulk-buttons">
+                    <button
+                      type="button"
+                      className="transactions-bulk-clear-btn"
+                      onClick={clearSelection}
+                    >
+                      Limpar
+                    </button>
 
-                  <button
-                    type="button"
-                    className="delete-btn"
-                    onClick={() =>
-                      setShowBulkDeleteModal(
-                        true,
-                      )
-                    }
-                    style={{
-                      padding:
-                        '0 14px',
-                      height: 40,
-                    }}
-                  >
-                    Excluir selecionadas
-                  </button>
+                    <button
+                      type="button"
+                      className="transactions-bulk-delete-btn"
+                      onClick={() =>
+                        setShowBulkDeleteModal(
+                          true,
+                        )
+                      }
+                    >
+                      Excluir
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

@@ -1318,11 +1318,11 @@ function ExecutiveMiniMetric({
         padding: '14px 16px',
         borderRadius: 18,
         background:
-          'rgba(15, 23, 42, 0.28)',
+          'var(--premium-soft-surface)',
         border:
           tone === 'income'
-            ? '1px solid rgba(34, 197, 94, 0.22)'
-            : '1px solid rgba(248, 113, 113, 0.22)',
+            ? '1px solid var(--premium-success-border)'
+            : '1px solid var(--premium-danger-border)',
       }}
     >
       <span className="planning-metric-label">
@@ -1336,8 +1336,8 @@ function ExecutiveMiniMetric({
           fontSize: 18,
           color:
             tone === 'income'
-              ? '#86efac'
-              : '#fca5a5',
+              ? 'var(--premium-success-color)'
+              : 'var(--premium-danger-color)',
         }}
       >
         {value}
@@ -1366,9 +1366,9 @@ function SetupStep({
         padding: 12,
         borderRadius: 16,
         background:
-          'rgba(15, 23, 42, 0.24)',
+          'var(--premium-soft-surface)',
         border:
-          '1px solid rgba(148, 163, 184, 0.14)',
+          '1px solid var(--premium-soft-border)',
       }}
     >
       <span
@@ -1381,9 +1381,9 @@ function SetupStep({
           flexShrink: 0,
           fontSize: 12,
           fontWeight: 900,
-          color: '#bfdbfe',
+          color: 'var(--premium-step-color)',
           background:
-            'rgba(37, 99, 235, 0.22)',
+            'var(--premium-step-bg)',
         }}
       >
         {index}
@@ -1432,11 +1432,11 @@ function InsightFeedItem({
         padding: '18px 20px',
         borderRadius: 22,
         background:
-          'linear-gradient(135deg, rgba(15, 23, 42, 0.34), rgba(30, 41, 59, 0.42))',
+          'var(--premium-soft-surface)',
         border:
-          '1px solid rgba(148, 163, 184, 0.18)',
+          '1px solid var(--premium-soft-border)',
         boxShadow:
-          '0 18px 44px rgba(15, 23, 42, 0.08)',
+          'var(--premium-soft-shadow)',
       }}
     >
       <div className="planning-metric-icon">
@@ -1499,12 +1499,12 @@ function ChecklistAction({
         borderRadius: 22,
         background:
           done
-            ? 'linear-gradient(135deg, rgba(22, 163, 74, 0.12), rgba(15, 23, 42, 0.24))'
-            : 'linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(15, 23, 42, 0.24))',
+            ? 'var(--premium-success-surface)'
+            : 'var(--premium-warning-surface)',
         border:
           done
-            ? '1px solid rgba(34, 197, 94, 0.28)'
-            : '1px solid rgba(245, 158, 11, 0.32)',
+            ? '1px solid var(--premium-success-border)'
+            : '1px solid var(--premium-warning-border)',
       }}
     >
       <div
@@ -1514,9 +1514,13 @@ function ChecklistAction({
           borderRadius: 12,
           display: 'grid',
           placeItems: 'center',
-          color: done ? '#86efac' : '#fcd34d',
+          color: done
+            ? 'var(--premium-success-color)'
+            : 'var(--premium-warning-color)',
           background:
-            'rgba(255, 255, 255, 0.06)',
+            done
+              ? 'var(--premium-success-icon-bg)'
+              : 'var(--premium-warning-icon-bg)',
         }}
       >
         {done ? (
