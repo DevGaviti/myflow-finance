@@ -2,7 +2,7 @@ import {
   LayoutDashboard,
   Receipt,
   Target,
-  Wallet,
+  CalendarCheck,
   Upload,
   ChevronLeft,
   ChevronRight,
@@ -26,6 +26,11 @@ const menuItems = [
     path: '/dashboard',
   },
   {
+    label: 'Planejamento Mensal',
+    icon: CalendarCheck,
+    path: '/monthly-plan',
+  },
+  {
     label: 'Transações',
     icon: Receipt,
     path: '/transactions',
@@ -39,11 +44,6 @@ const menuItems = [
     label: 'Metas',
     icon: Target,
     path: '/goals',
-  },
-  {
-    label: 'Planejamento',
-    icon: Wallet,
-    path: '/planning',
   },
 ];
 

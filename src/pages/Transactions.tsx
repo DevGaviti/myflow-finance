@@ -18,6 +18,11 @@ import EmptyState from '../components/EmptyState';
 
 import { useTransactions } from '../hook/useTransactions';
 
+import {
+  listMonthlyPlanItems,
+  updateMonthlyPlanItem,
+} from '../services/monthlyPlanService';
+
 import { formatMoney } from '../utils/format';
 import { exportToCSV } from '../utils/export';
 
@@ -36,6 +41,108 @@ const categories = [
   'Investimentos',
   'Outros',
 ];
+
+
+type PlanSuggestion = {
+  transaction: Transaction;
+  item: MonthlyPlanItem;
+};
+
+function normalizeText(value: string) {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+}
+
+function getTransactionMonthYear(
+  date: string,
+) {
+  const transactionDate =
+    new Date(date);
+
+  return {
+    month:
+      transactionDate.getMonth() + 1,
+
+    year:
+      transactionDate.getFullYear(),
+  };
+}
+
+function isSameFinancialType(
+  transaction: Transaction,
+  item: MonthlyPlanItem,
+) {
+  if (transaction.type === 'income') {
+    return item.type === 'income';
+  }
+
+  return item.type === 'fixed_expense';
+}
+
+function isSimilarTitle(
+  transactionTitle: string,
+  planTitle: string,
+) {
+  const normalizedTransaction =
+    normalizeText(transactionTitle);
+
+  const normalizedPlan =
+    normalizeText(planTitle);
+
+  if (
+    normalizedTransaction ===
+    normalizedPlan
+  ) {
+    return true;
+  }
+
+  return (
+    normalizedTransaction.includes(
+      normalizedPlan,
+    ) ||
+    normalizedPlan.includes(
+      normalizedTransaction,
+    )
+  );
+}
+
+function findMatchingPlanItem({
+  transaction,
+  items,
+}: {
+  transaction: Transaction;
+  items: MonthlyPlanItem[];
+}) {
+  return items.find((item) => {
+    const sameType =
+      isSameFinancialType(
+        transaction,
+        item,
+      );
+
+    const sameValue =
+      Math.abs(
+        transaction.value -
+          item.amount,
+      ) < 0.01;
+
+    const similarTitle =
+      isSimilarTitle(
+        transaction.title,
+        item.title,
+      );
+
+    return (
+      !item.paid &&
+      sameType &&
+      sameValue &&
+      similarTitle
+    );
+  });
+}
 
 export default function Transactions() {
   const {
@@ -113,6 +220,13 @@ export default function Transactions() {
     useState(false);
 
   const [
+    pendingPlanSuggestion,
+    setPendingPlanSuggestion,
+  ] = useState<PlanSuggestion | null>(
+    null,
+  );
+
+  const [
     isDeleting,
     setIsDeleting,
   ] = useState(false);
@@ -152,6 +266,65 @@ export default function Transactions() {
     setFormattedValue(
       formatCurrency(raw),
     );
+  }
+
+
+  async function checkPlanSuggestion(
+    transaction: Transaction | null,
+  ) {
+    if (!transaction) {
+      return;
+    }
+
+    const {
+      month,
+      year,
+    } = getTransactionMonthYear(
+      transaction.date,
+    );
+
+    const monthlyPlanItems =
+      await listMonthlyPlanItems({
+        month,
+        year,
+      });
+
+    const matchingItem =
+      findMatchingPlanItem({
+        transaction,
+        items: monthlyPlanItems,
+      });
+
+    if (!matchingItem) {
+      return;
+    }
+
+    setPendingPlanSuggestion({
+      transaction,
+      item: matchingItem,
+    });
+  }
+
+  async function handleLinkTransactionToPlan() {
+    if (!pendingPlanSuggestion) {
+      return;
+    }
+
+    await updateMonthlyPlanItem(
+      pendingPlanSuggestion.item.id,
+      {
+        paid: true,
+        transactionId:
+          pendingPlanSuggestion
+            .transaction.id,
+      },
+    );
+
+    toast.success(
+      'Planejamento atualizado com essa transação.',
+    );
+
+    setPendingPlanSuggestion(null);
   }
 
   function resetForm() {
@@ -195,8 +368,13 @@ export default function Transactions() {
           new Date(date).toISOString(),
       };
 
-    await addTransaction(
-      newTransaction,
+    const createdTransaction =
+      await addTransaction(
+        newTransaction,
+      );
+
+    await checkPlanSuggestion(
+      createdTransaction,
     );
 
     resetForm();
@@ -260,7 +438,7 @@ export default function Transactions() {
       setTimeout(resolve, 500),
     );
 
-    await updateTransaction({
+    const updatedTransaction = {
       id: editId,
       title,
       value: Number(value),
@@ -268,7 +446,15 @@ export default function Transactions() {
       category,
       date:
         new Date(date).toISOString(),
-    });
+    };
+
+    await updateTransaction(
+      updatedTransaction,
+    );
+
+    await checkPlanSuggestion(
+      updatedTransaction,
+    );
 
     setEditId(null);
     resetForm();
@@ -899,6 +1085,25 @@ export default function Transactions() {
         }
         onConfirm={handleBulkDelete}
       />
+
+      <ConfirmModal
+        open={Boolean(pendingPlanSuggestion)}
+        title="Vincular ao planejamento?"
+        description={
+          pendingPlanSuggestion
+            ? `Essa transação parece corresponder ao item "${pendingPlanSuggestion.item.title}" do Planejamento Mensal. Deseja marcar como ${pendingPlanSuggestion.item.type === 'income' ? 'recebido' : 'pago'} e vincular essa transação?`
+            : ''
+        }
+        confirmText="Vincular"
+        cancelText="Agora não"
+        onCancel={() =>
+          setPendingPlanSuggestion(null)
+        }
+        onConfirm={
+          handleLinkTransactionToPlan
+        }
+      />
+
     </div>
   );
 }

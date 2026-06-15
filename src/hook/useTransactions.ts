@@ -224,12 +224,12 @@ export function useTransactions() {
 
   async function addTransaction(
     transaction: Transaction,
-  ) {
+  ): Promise<Transaction | null> {
     if (!user) {
       handleError(
         'Usuário não autenticado.',
       );
-      return;
+      return null;
     }
 
     const { data, error } =
@@ -246,12 +246,15 @@ export function useTransactions() {
 
     if (error) {
       handleError(error.message);
-      return;
+      return null;
     }
+
+    const createdTransaction =
+      mapFromSupabase(data);
 
     setTransactions(
       (prev) => [
-        mapFromSupabase(data),
+        createdTransaction,
         ...prev,
       ],
     );
@@ -259,6 +262,8 @@ export function useTransactions() {
     notifySuccess(
       'Transação adicionada com sucesso!',
     );
+
+    return createdTransaction;
   }
 
   async function importTransactions({

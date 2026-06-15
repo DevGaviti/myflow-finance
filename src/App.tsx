@@ -19,6 +19,7 @@ import { Planning } from './pages/Planning';
 import Imports from './pages/Imports';
 import CategoryRules from './pages/CategoryRules';
 import RecurringTransactions from './pages/RecurringTransactions';
+import MonthlyPlan from './pages/MonthlyPlan';
 
 export default function App() {
   return (
@@ -39,6 +40,11 @@ export default function App() {
           <Route
             path="/dashboard"
             element={<Dashboard />}
+          />
+
+          <Route
+            path="/monthly-plan"
+            element={<MonthlyPlan />}
           />
 
           <Route

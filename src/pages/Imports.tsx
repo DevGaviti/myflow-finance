@@ -22,7 +22,6 @@ import {
 import Card from '../components/Card';
 import EmptyState from '../components/EmptyState';
 import LoadingButton from '../components/LoadingButton';
-import ImportQualityCard from '../components/imports/ImportQualityCard';
 
 import {
   notifySuccess,
@@ -1188,7 +1187,7 @@ export default function Imports() {
             <div className="imports-preview-list">
               {previewRows.map((item) => (
                 <div
-                  key={item.id}
+                  key={item.externalId}
                   className="imports-preview-row"
                 >
                   <div>
