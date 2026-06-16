@@ -30,8 +30,7 @@ import {
     deleteMonthlyPlanItem,
     listMonthlyPlanItems,
     toggleMonthlyPlanItemPaid,
-    updateMonthlyPlanItem,
-  } from '../services/monthlyPlanService';
+    } from '../services/monthlyPlanService';
   
   import {
     formatMoney,

@@ -31,6 +31,10 @@ import type {
   TransactionType,
 } from '../types/transaction';
 
+import type {
+  MonthlyPlanItem,
+} from '../types/monthlyPlan';
+
 const categories = [
   'Alimentação',
   'Transporte',
