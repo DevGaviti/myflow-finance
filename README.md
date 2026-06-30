@@ -18,7 +18,7 @@ O MyFlow Finance foi desenvolvido com foco em:
 - performance visual;
 - experiência mobile premium.
 
-O projeto evoluiu de um dashboard financeiro simples para uma aplicação com estrutura próxima de produtos SaaS modernos.
+O projeto evoluiu de um dashboard financeiro simples para uma aplicação com estrutura próxima de produtos SaaS modernos..
 
 ---
 
